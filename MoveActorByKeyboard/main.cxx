@@ -23,6 +23,41 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 
+class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
+{
+public:
+    static KeyPressInteractorStyle* New();
+    vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
+
+    virtual void OnKeyPress() override
+    {
+        vtkRenderWindowInteractor* rwi = this->Interactor;
+        std::string key = rwi->GetKeySym();
+
+        std::cout<<"Pressed "<<key<<endl;
+
+        if (key == "Up")
+        {
+
+        }  
+        else if (key == "Down")
+        {
+
+        }  
+        else if (key == "Left")
+        {
+
+        }
+        else if (key == "Right")
+        {
+
+        }
+
+        vtkInteractorStyleTrackballCamera::OnKeyPress();
+    }
+};
+vtkStandardNewMacro(KeyPressInteractorStyle);
+
 int main(int, char*[])
 {
   vtkNew<vtkNamedColors> colors;
@@ -51,7 +86,7 @@ int main(int, char*[])
   vtkNew<vtkRenderWindowInteractor> interactor;
   interactor->SetRenderWindow(renderWindow);
 
-  vtkNew<vtkInteractorStyleTrackballCamera> style;
+  vtkNew<KeyPressInteractorStyle> style;
   interactor->SetInteractorStyle(style);
 
   interactor->Initialize();
