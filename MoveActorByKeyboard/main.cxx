@@ -22,6 +22,8 @@
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
+#include <vtkTransform.h>
+#include <vtkCamera.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
 {
@@ -36,25 +38,48 @@ public:
 
         std::cout<<"Pressed "<<key<<endl;
 
+        vtkNew<vtkTransform> transform;
+        vtkLinearTransform* userTransform = mConeActor->GetUserTransform();
         if (key == "Up")
         {
-
+            transform->SetInput(userTransform);
+            transform->Translate(0, 1, 0);
+            mConeActor->SetUserTransform(transform);
         }  
         else if (key == "Down")
         {
-
+            transform->SetInput(userTransform);
+            transform->Translate(0, -1, 0);
+            mConeActor->SetUserTransform(transform);
         }  
         else if (key == "Left")
         {
-
+            transform->SetInput(userTransform);
+            transform->Translate(0, 0, 1);
+            mConeActor->SetUserTransform(transform);
         }
         else if (key == "Right")
         {
-
+            transform->SetInput(userTransform);
+            transform->Translate(0, 0, -1);
+            mConeActor->SetUserTransform(transform);
         }
+        mRenderWindow->Render();
 
         vtkInteractorStyleTrackballCamera::OnKeyPress();
     }
+    void SetConeActor(vtkActor *coneActor)
+    {
+        mConeActor = coneActor;
+    }
+
+    void SetRenderWindow(vtkRenderWindow* window)
+    {
+        mRenderWindow = window;
+    }
+private:
+    vtkActor* mConeActor;
+    vtkRenderWindow* mRenderWindow;
 };
 vtkStandardNewMacro(KeyPressInteractorStyle);
 
@@ -80,14 +105,19 @@ int main(int, char*[])
 
   vtkNew<vtkRenderWindow> renderWindow;
   renderWindow->AddRenderer(renderer);
-  renderWindow->SetSize(300, 300);
+  renderWindow->SetSize(800, 800);
   renderWindow->SetWindowName("MoveActorByKeyboard");
 
   vtkNew<vtkRenderWindowInteractor> interactor;
   interactor->SetRenderWindow(renderWindow);
 
   vtkNew<KeyPressInteractorStyle> style;
+  style->SetConeActor(coneActor);
+  style->SetRenderWindow(renderWindow);
   interactor->SetInteractorStyle(style);
+
+  renderer->GetActiveCamera()->Azimuth(90);
+  renderer->ResetCamera();
 
   interactor->Initialize();
   interactor->Start();
