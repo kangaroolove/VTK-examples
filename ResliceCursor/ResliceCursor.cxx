@@ -74,7 +74,7 @@ int main(int, char*[])
     vtkNew<vtkNamedColors> colors;
 
     vtkNew<vtkNrrdReader> reader;
-    reader->SetFileName("D:/MRI.nrrd");
+    reader->SetFileName("./res/MRI.nrrd");
     reader->Update();
 
     std::vector<vtkImageResliceMapper*> mappers;
