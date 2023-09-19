@@ -2,6 +2,10 @@
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkSmartPointer.h>
 #include <vtkRenderer.h>
+#include <vtkConeSource.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkActor.h>
+#include <vtkNew.h>
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     : QVTKOpenGLNativeWidget(parent)
@@ -9,6 +13,7 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     , m_renderer(vtkSmartPointer<vtkRenderer>::New())
 {
     initialize();
+    createTestData();
 }
 
 VTKOpenGLWidget::~VTKOpenGLWidget()
@@ -20,4 +25,17 @@ void VTKOpenGLWidget::initialize()
 {
     m_renderWindow->AddRenderer(m_renderer);
     SetRenderWindow(m_renderWindow);
+}
+
+void VTKOpenGLWidget::createTestData()
+{
+    vtkNew<vtkConeSource> cone;
+
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputConnection(cone->GetOutputPort());
+
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+
+    m_renderer->AddActor(actor);
 }

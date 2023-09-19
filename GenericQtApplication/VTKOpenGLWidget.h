@@ -14,6 +14,7 @@ public:
 
 private:
     void initialize();
+    void createTestData();
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
