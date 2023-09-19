@@ -33,6 +33,8 @@ list(APPEND EXTRA_LIBS
 
 set(PROJECT_SOURCES
     main.cpp
+    VTKOpenGLWidget.cpp
+    VTKOpenGLWidget.h
 )
 
 set(PROJECT_UIS

@@ -1,6 +1,6 @@
 #include <QApplication>
 #include <QSurfaceFormat>
-#include <QVTKOpenGLNativeWidget.h>
+#include "VTKOpenGLWidget.h"
 
 int main( int argc, char** argv )
 {
@@ -8,7 +8,7 @@ int main( int argc, char** argv )
   QSurfaceFormat::setDefaultFormat(QVTKOpenGLNativeWidget::defaultFormat());
 
   QApplication app( argc, argv );
-  QVTKOpenGLNativeWidget widget;
+  VTKOpenGLWidget widget;
   widget.show();
 
   return app.exec();
