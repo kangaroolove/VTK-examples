@@ -14,11 +14,85 @@
 #include <vtkCylinderSource.h>
 #include <vtkTransformFilter.h>
 #include <vtkTransform.h>
+#include <vtkAssembly.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkProp3DFollower.h>
+#include <vtkTransformPolyDataFilter.h>
+
+
+class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
+{
+public:
+    static KeyPressInteractorStyle* New();
+    vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
+
+    virtual void OnKeyPress() override
+    {
+        vtkRenderWindowInteractor* rwi = this->Interactor;
+        std::string key = rwi->GetKeySym();
+
+        std::cout<<"Pressed "<<key<<endl;
+
+        vtkNew<vtkTransform> transform;
+        vtkLinearTransform* userTransform = mProp3D->GetUserTransform();
+        if (key == "Up")
+        {
+            transform->SetInput(userTransform);
+            transform->Translate(0, 1, 0);
+            mProp3D->SetUserTransform(transform);
+        }  
+        else if (key == "Down")
+        {
+            transform->SetInput(userTransform);
+            transform->Translate(0, -1, 0);
+            mProp3D->SetUserTransform(transform);
+        }  
+        else if (key == "Left")
+        {
+            transform->SetInput(userTransform);
+            transform->Translate(-1, 0, 0);
+            mProp3D->SetUserTransform(transform);
+        }
+        else if (key == "Right")
+        {
+            transform->SetInput(userTransform);
+            transform->Translate(1, 0, 0);
+            mProp3D->SetUserTransform(transform);
+        }
+        mRenderWindow->Render();
+
+        vtkInteractorStyleTrackballCamera::OnKeyPress();
+    }
+    void SetActor(vtkActor *actor)
+    {
+        mActor = actor;
+    }
+
+    void SetProp3D(vtkProp3D *prop3D)
+    {
+        mProp3D = prop3D;
+    }
+
+    void SetRenderWindow(vtkGenericOpenGLRenderWindow* window)
+    {
+        mRenderWindow = window;
+    }
+
+    void aa() {
+        int a = 0;
+    }
+private:
+    vtkActor* mActor = nullptr;
+    vtkProp3D* mProp3D = nullptr;
+    vtkGenericOpenGLRenderWindow* mRenderWindow = nullptr;
+};
+vtkStandardNewMacro(KeyPressInteractorStyle);
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     : QVTKOpenGLNativeWidget(parent)
     , m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New())
     , m_renderer(vtkSmartPointer<vtkRenderer>::New())
+    , m_style(vtkSmartPointer<KeyPressInteractorStyle>::New())
 {
     initialize();
     createTestData();
@@ -33,21 +107,14 @@ void VTKOpenGLWidget::initialize()
 {
     m_renderWindow->AddRenderer(m_renderer);
     SetRenderWindow(m_renderWindow);
+
+    auto it = m_renderWindow->GetInteractor();
+    m_style->SetRenderWindow(m_renderWindow);
+    it->SetInteractorStyle(m_style);
 }
 
 void VTKOpenGLWidget::createTestData()
 {
-    // vtkNew<vtkConeSource> cone;
-
-    // vtkNew<vtkPolyDataMapper> mapper;
-    // mapper->SetInputConnection(cone->GetOutputPort());
-
-    // vtkNew<vtkActor> actor;
-    // actor->SetMapper(mapper);
-
-    // m_renderer->AddActor(actor);
-
-
     vtkNew<vtkCylinderSource> cylinder;
     cylinder->SetRadius(5);
     cylinder->SetHeight(20);
@@ -56,7 +123,7 @@ void VTKOpenGLWidget::createTestData()
     vtkNew<vtkTransform> cylinderTransform;
     cylinderTransform->RotateX(90);
 
-    vtkNew<vtkTransformFilter> cylinderTransformFilter;
+    vtkNew<vtkTransformPolyDataFilter> cylinderTransformFilter;
     cylinderTransformFilter->SetInputConnection(cylinder->GetOutputPort());
     cylinderTransformFilter->SetTransform(cylinderTransform);
 
@@ -66,9 +133,6 @@ void VTKOpenGLWidget::createTestData()
     vtkNew<vtkActor> cylinderActor;
     cylinderActor->SetMapper(cylinderMapper);
 
-    m_renderer->AddActor(cylinderActor);
-
-
 
 
     vtkNew<vtkVectorText> text;
@@ -77,17 +141,23 @@ void VTKOpenGLWidget::createTestData()
     vtkNew<vtkTransform> textTransform;
     textTransform->Translate(-2, 10, 0);
 
-    vtkNew<vtkTransformFilter> textTransformFilter;
+    vtkNew<vtkTransformPolyDataFilter> textTransformFilter;
     textTransformFilter->SetInputConnection(text->GetOutputPort());
     textTransformFilter->SetTransform(textTransform);
 
     vtkNew<vtkPolyDataMapper> textMapper;
     textMapper->SetInputConnection(textTransformFilter->GetOutputPort());
 
-    vtkNew<vtkFollower> follower;
-    follower->SetMapper(textMapper);
-    follower->SetCamera(m_renderer->GetActiveCamera());
-    m_renderer->AddActor(follower);
+    vtkNew<vtkActor> textActor;
+    textActor->SetMapper(textMapper);
+
+    vtkNew<vtkAssembly> assembly;
+    assembly->AddPart(textActor);
+    assembly->AddPart(cylinderActor);
+
+    m_renderer->AddActor(assembly);
+    m_style->SetProp3D(assembly);
 
     m_renderer->ResetCamera();
+
 }
