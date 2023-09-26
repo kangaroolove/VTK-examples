@@ -5,3 +5,6 @@
 /ResliceCursor/res
 /GenericQtApplication/.vscode
 /GenericQtApplication/build
+/Marker/build
+/Marker/.vscode
+/ShareContextWithMultipleWindow
