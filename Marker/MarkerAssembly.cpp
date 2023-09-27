@@ -5,6 +5,7 @@
 #include <vtkActor.h>
 #include <vtkVectorText.h>
 #include <vtkProperty.h>
+#include <vtkCylinderSource.h>
 
 vtkStandardNewMacro(MarkerAssembly)
 
@@ -38,26 +39,27 @@ MarkerAssembly::MarkerAssembly() :
 
     m_textActor->SetMapper(textMapper);
 
-
     this->AddPart(m_textActor);
 
 
 
-    // vtkNew<vtkCylinderSource> cylinder;
-    // cylinder->SetRadius(5);
-    // cylinder->SetHeight(20);
-    // cylinder->SetResolution(100);
+    vtkNew<vtkCylinderSource> cylinder;
+    cylinder->SetRadius(5);
+    cylinder->SetHeight(20);
+    cylinder->SetResolution(100);
 
-    // vtkNew<vtkTransform> cylinderTransform;
-    // cylinderTransform->RotateX(90);
+    vtkNew<vtkTransform> cylinderTransform;
+    cylinderTransform->RotateX(90);
 
-    // vtkNew<vtkTransformPolyDataFilter> cylinderTransformFilter;
-    // cylinderTransformFilter->SetInputConnection(cylinder->GetOutputPort());
-    // cylinderTransformFilter->SetTransform(cylinderTransform);
+    vtkNew<vtkTransformPolyDataFilter> cylinderTransformFilter;
+    cylinderTransformFilter->SetInputConnection(cylinder->GetOutputPort());
+    cylinderTransformFilter->SetTransform(cylinderTransform);
 
-    // vtkNew<vtkPolyDataMapper> cylinderMapper;
-    // cylinderMapper->SetInputConnection(cylinderTransformFilter->GetOutputPort());
+    vtkNew<vtkPolyDataMapper> cylinderMapper;
+    cylinderMapper->SetInputConnection(cylinderTransformFilter->GetOutputPort());
 
-    // vtkNew<vtkActor> cylinderActor;
-    // cylinderActor->SetMapper(cylinderMapper);
+    vtkNew<vtkActor> cylinderActor;
+    cylinderActor->SetMapper(cylinderMapper);
+
+    this->AddPart(cylinderActor);
 }
