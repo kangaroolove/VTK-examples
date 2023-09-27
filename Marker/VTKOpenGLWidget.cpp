@@ -20,6 +20,7 @@
 #include <vtkTransformPolyDataFilter.h>
 #include "MarkerAssembly.h"
 #include <QPushButton>
+#include <QDebug>
 
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
@@ -61,6 +62,12 @@ public:
             transform->Translate(1, 0, 0);
             mProp3D->SetUserTransform(transform);
         }
+
+        double *bounds = mProp3D->GetBounds();
+        for (int i = 0; i < 6; ++i)
+        {
+            qDebug()<<i<<" = "<<bounds[i];
+        }
         mRenderWindow->Render();
 
         vtkInteractorStyleTrackballCamera::OnKeyPress();
@@ -78,10 +85,6 @@ public:
     void SetRenderWindow(vtkGenericOpenGLRenderWindow* window)
     {
         mRenderWindow = window;
-    }
-
-    void aa() {
-        int a = 0;
     }
 private:
     vtkActor* mActor = nullptr;
@@ -119,7 +122,7 @@ void VTKOpenGLWidget::initialize()
     QPushButton* btn = new QPushButton(this);
     connect(btn, &QPushButton::clicked, this, [this]{
         m_markerAssembly->setText("CCCCC");
-        m_markerAssembly->setTextColor(1.0, 0, 0);
+        m_markerAssembly->setColor(1.0, 0, 0);
         m_renderWindow->Render();
     });
 }
@@ -174,4 +177,5 @@ void VTKOpenGLWidget::createTestData()
     #endif
 
     m_renderer->AddActor(m_markerAssembly);
+    m_style->SetProp3D(m_markerAssembly);
 }

@@ -17,9 +17,10 @@ void MarkerAssembly::setText(const std::string& text)
     m_vectorText->SetText(text.c_str());
 }
 
-void MarkerAssembly::setTextColor(const double& r, const double& g, const double& b)
+void MarkerAssembly::setColor(const double& r, const double& g, const double& b)
 {
     m_textActor->GetProperty()->SetColor(r, g, b);
+    m_cutterActor->GetProperty()->SetColor(r, g, b);
 }
 
 void MarkerAssembly::setNormalType(const NormalType &type)
@@ -52,7 +53,8 @@ MarkerAssembly::MarkerAssembly() :
     m_normalType(NormalType::Y),
     m_textTransform(vtkSmartPointer<vtkTransform>::New()),
     m_cutter(vtkSmartPointer<vtkCutter>::New()),
-    m_plane(vtkSmartPointer<vtkPlane>::New())
+    m_plane(vtkSmartPointer<vtkPlane>::New()),
+    m_cutterActor(vtkSmartPointer<vtkActor>::New())
 {
     m_plane->SetOrigin(0, 0, 0);
     setNormalType(m_normalType);
@@ -84,15 +86,13 @@ MarkerAssembly::MarkerAssembly() :
     cylinderTransformFilter->SetInputConnection(cylinder->GetOutputPort());
     cylinderTransformFilter->SetTransform(cylinderTransform);
 
-
     m_cutter->SetCutFunction(m_plane);
     m_cutter->SetInputConnection(cylinderTransformFilter->GetOutputPort());
 
     vtkNew<vtkPolyDataMapper> cutterMapper;
     cutterMapper->SetInputConnection(m_cutter->GetOutputPort());
 
-    vtkNew<vtkActor> cutterActor;
-    cutterActor->SetMapper(cutterMapper);
+    m_cutterActor->SetMapper(cutterMapper);
 
-    this->AddPart(cutterActor);
+    this->AddPart(m_cutterActor);
 }
