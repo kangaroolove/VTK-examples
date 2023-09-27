@@ -6,6 +6,8 @@
 
 class vtkVectorText;
 class vtkActor;
+class vtkCutter;
+class vtkPlane;
 
 class MarkerAssembly : public vtkAssembly
 {
@@ -31,4 +33,6 @@ protected:
     vtkSmartPointer<vtkActor> m_textActor;
     NormalType m_normalType;
     vtkSmartPointer<vtkTransform> m_textTransform;
+    vtkSmartPointer<vtkCutter> m_cutter;
+    vtkSmartPointer<vtkPlane> m_plane;
 };

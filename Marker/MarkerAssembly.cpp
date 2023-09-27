@@ -6,6 +6,8 @@
 #include <vtkVectorText.h>
 #include <vtkProperty.h>
 #include <vtkCylinderSource.h>
+#include <vtkCutter.h>
+#include <vtkPlane.h>
 
 vtkStandardNewMacro(MarkerAssembly)
 
@@ -28,12 +30,17 @@ void MarkerAssembly::setNormalType(const NormalType &type)
     transform->PostMultiply();
     if (type == NormalType::X)
     {
+        m_plane->SetNormal(1, 0, 0);
         transform->RotateY(90);
     }
     else if (type == NormalType::Y)
     {
+        m_plane->SetNormal(0, 1, 0);
         transform->RotateX(90);
     }
+    else if (type == NormalType::Z)
+        m_plane->SetNormal(0, 0, 1);
+
     transform->Translate(0, 10, 0);
     m_textTransform = transform;
 }
@@ -42,12 +49,15 @@ MarkerAssembly::MarkerAssembly() :
     m_vectorText(vtkSmartPointer<vtkVectorText>::New()),
     m_text("Marker"),
     m_textActor(vtkSmartPointer<vtkActor>::New()),
-    m_normalType(NormalType::X),
-    m_textTransform(vtkSmartPointer<vtkTransform>::New())
+    m_normalType(NormalType::Y),
+    m_textTransform(vtkSmartPointer<vtkTransform>::New()),
+    m_cutter(vtkSmartPointer<vtkCutter>::New()),
+    m_plane(vtkSmartPointer<vtkPlane>::New())
 {
-    m_vectorText->SetText(m_text.c_str());
-
+    m_plane->SetOrigin(0, 0, 0);
     setNormalType(m_normalType);
+
+    m_vectorText->SetText(m_text.c_str());
 
     vtkNew<vtkTransformPolyDataFilter> textTransformFilter;
     textTransformFilter->SetInputConnection(m_vectorText->GetOutputPort());
@@ -74,11 +84,15 @@ MarkerAssembly::MarkerAssembly() :
     cylinderTransformFilter->SetInputConnection(cylinder->GetOutputPort());
     cylinderTransformFilter->SetTransform(cylinderTransform);
 
-    vtkNew<vtkPolyDataMapper> cylinderMapper;
-    cylinderMapper->SetInputConnection(cylinderTransformFilter->GetOutputPort());
 
-    vtkNew<vtkActor> cylinderActor;
-    cylinderActor->SetMapper(cylinderMapper);
+    m_cutter->SetCutFunction(m_plane);
+    m_cutter->SetInputConnection(cylinderTransformFilter->GetOutputPort());
 
-    this->AddPart(cylinderActor);
+    vtkNew<vtkPolyDataMapper> cutterMapper;
+    cutterMapper->SetInputConnection(m_cutter->GetOutputPort());
+
+    vtkNew<vtkActor> cutterActor;
+    cutterActor->SetMapper(cutterMapper);
+
+    this->AddPart(cutterActor);
 }
