@@ -17,6 +17,11 @@ void MarkerAssembly::setText(const std::string& text)
     m_vectorText->SetText(text.c_str());
 }
 
+void MarkerAssembly::setTextVisible(const bool &visible)
+{
+    m_textActor->SetVisibility(visible);
+}
+
 void MarkerAssembly::setColor(const double& r, const double& g, const double& b)
 {
     m_textActor->GetProperty()->SetColor(r, g, b);
@@ -71,6 +76,11 @@ MarkerAssembly::MarkerAssembly() :
     m_textActor->SetMapper(textMapper);
 
     this->AddPart(m_textActor);
+
+    
+    setTextVisible(false);
+
+
 
 
 

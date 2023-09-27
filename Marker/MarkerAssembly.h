@@ -23,6 +23,7 @@ public:
     static MarkerAssembly* New();
 
     void setText(const std::string& text);
+    void setTextVisible(const bool& visible);
     void setColor(const double& r, const double& g, const double& b);
     void setNormalType(const NormalType& type);
 protected:
