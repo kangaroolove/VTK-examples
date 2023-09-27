@@ -23,7 +23,8 @@ void MarkerAssembly::setTextColor(const double& r, const double& g, const double
 MarkerAssembly::MarkerAssembly() :
     m_vectorText(vtkSmartPointer<vtkVectorText>::New()),
     m_text("Marker"),
-    m_textActor(vtkSmartPointer<vtkActor>::New())
+    m_textActor(vtkSmartPointer<vtkActor>::New()),
+    m_normalType(NormalType::Z)
 {
     m_vectorText->SetText(m_text.c_str());
 
