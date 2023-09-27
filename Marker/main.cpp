@@ -9,7 +9,7 @@ int main( int argc, char** argv )
 
   QApplication app( argc, argv );
   VTKOpenGLWidget widget;
-  widget.show();
+  widget.showMaximized();
 
   return app.exec();
 }

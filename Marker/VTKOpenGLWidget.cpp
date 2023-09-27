@@ -18,6 +18,8 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkProp3DFollower.h>
 #include <vtkTransformPolyDataFilter.h>
+#include "MarkerAssembly.h"
+#include <QPushButton>
 
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
@@ -93,6 +95,7 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     , m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New())
     , m_renderer(vtkSmartPointer<vtkRenderer>::New())
     , m_style(vtkSmartPointer<KeyPressInteractorStyle>::New())
+    , m_markerAssembly(vtkSmartPointer<MarkerAssembly>::New())
 {
     initialize();
     createTestData();
@@ -111,10 +114,18 @@ void VTKOpenGLWidget::initialize()
     auto it = m_renderWindow->GetInteractor();
     m_style->SetRenderWindow(m_renderWindow);
     it->SetInteractorStyle(m_style);
+
+
+    QPushButton* btn = new QPushButton(this);
+    connect(btn, &QPushButton::clicked, this, [this]{
+        m_markerAssembly->setText("CCCCC");
+        m_renderWindow->Render();
+    });
 }
 
 void VTKOpenGLWidget::createTestData()
 {
+    #if 0
     vtkNew<vtkCylinderSource> cylinder;
     cylinder->SetRadius(5);
     cylinder->SetHeight(20);
@@ -159,5 +170,7 @@ void VTKOpenGLWidget::createTestData()
     m_style->SetProp3D(assembly);
 
     m_renderer->ResetCamera();
+    #endif
 
+    m_renderer->AddActor(m_markerAssembly);
 }
