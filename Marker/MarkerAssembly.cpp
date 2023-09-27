@@ -20,20 +20,38 @@ void MarkerAssembly::setTextColor(const double& r, const double& g, const double
     m_textActor->GetProperty()->SetColor(r, g, b);
 }
 
+void MarkerAssembly::setNormalType(const NormalType &type)
+{
+    m_normalType = type;
+
+    vtkNew<vtkTransform> transform;
+    transform->PostMultiply();
+    if (type == NormalType::X)
+    {
+        transform->RotateY(90);
+    }
+    else if (type == NormalType::Y)
+    {
+        transform->RotateX(90);
+    }
+    transform->Translate(0, 10, 0);
+    m_textTransform = transform;
+}
+
 MarkerAssembly::MarkerAssembly() :
     m_vectorText(vtkSmartPointer<vtkVectorText>::New()),
     m_text("Marker"),
     m_textActor(vtkSmartPointer<vtkActor>::New()),
-    m_normalType(NormalType::Z)
+    m_normalType(NormalType::X),
+    m_textTransform(vtkSmartPointer<vtkTransform>::New())
 {
     m_vectorText->SetText(m_text.c_str());
 
-    vtkNew<vtkTransform> textTransform;
-    textTransform->Translate(0, 10, 0);
+    setNormalType(m_normalType);
 
     vtkNew<vtkTransformPolyDataFilter> textTransformFilter;
     textTransformFilter->SetInputConnection(m_vectorText->GetOutputPort());
-    textTransformFilter->SetTransform(textTransform);
+    textTransformFilter->SetTransform(m_textTransform);
 
     vtkNew<vtkPolyDataMapper> textMapper;
     textMapper->SetInputConnection(textTransformFilter->GetOutputPort());

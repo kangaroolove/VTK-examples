@@ -22,6 +22,7 @@ public:
 
     void setText(const std::string& text);
     void setTextColor(const double& r, const double& g, const double& b);
+    void setNormalType(const NormalType& type);
 protected:
     MarkerAssembly();
 
@@ -29,4 +30,5 @@ protected:
     vtkSmartPointer<vtkVectorText> m_vectorText;
     vtkSmartPointer<vtkActor> m_textActor;
     NormalType m_normalType;
+    vtkSmartPointer<vtkTransform> m_textTransform;
 };
