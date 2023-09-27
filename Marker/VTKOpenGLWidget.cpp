@@ -119,6 +119,7 @@ void VTKOpenGLWidget::initialize()
     QPushButton* btn = new QPushButton(this);
     connect(btn, &QPushButton::clicked, this, [this]{
         m_markerAssembly->setText("CCCCC");
+        m_markerAssembly->setTextColor(1.0, 0, 0);
         m_renderWindow->Render();
     });
 }

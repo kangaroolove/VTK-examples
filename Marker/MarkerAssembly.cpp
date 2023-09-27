@@ -4,6 +4,7 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
 #include <vtkVectorText.h>
+#include <vtkProperty.h>
 
 vtkStandardNewMacro(MarkerAssembly)
 
@@ -13,11 +14,16 @@ void MarkerAssembly::setText(const std::string& text)
     m_vectorText->SetText(text.c_str());
 }
 
+void MarkerAssembly::setTextColor(const double& r, const double& g, const double& b)
+{
+    m_textActor->GetProperty()->SetColor(r, g, b);
+}
+
 MarkerAssembly::MarkerAssembly() :
     m_vectorText(vtkSmartPointer<vtkVectorText>::New()),
-    m_text("Marker")
+    m_text("Marker"),
+    m_textActor(vtkSmartPointer<vtkActor>::New())
 {
-
     m_vectorText->SetText(m_text.c_str());
 
     vtkNew<vtkTransform> textTransform;
@@ -30,11 +36,10 @@ MarkerAssembly::MarkerAssembly() :
     vtkNew<vtkPolyDataMapper> textMapper;
     textMapper->SetInputConnection(textTransformFilter->GetOutputPort());
 
-    vtkNew<vtkActor> textActor;
-    textActor->SetMapper(textMapper);
+    m_textActor->SetMapper(textMapper);
 
 
-    this->AddPart(textActor);
+    this->AddPart(m_textActor);
 
 
 
