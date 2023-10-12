@@ -21,6 +21,9 @@
 #include "MarkerAssembly.h"
 #include <QPushButton>
 #include <QDebug>
+#include <vtkProperty2D.h>
+#include <vtkTextActor.h>
+#include <vtkTextProperty.h>
 
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
@@ -99,6 +102,7 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     , m_renderer(vtkSmartPointer<vtkRenderer>::New())
     , m_style(vtkSmartPointer<KeyPressInteractorStyle>::New())
     , m_markerAssembly(vtkSmartPointer<MarkerAssembly>::New())
+    , m_captionActor(vtkSmartPointer<vtkCaptionActor2D>::New())
 {
     initialize();
     createTestData();
@@ -116,20 +120,19 @@ void VTKOpenGLWidget::initialize()
 
     auto it = m_renderWindow->GetInteractor();
     m_style->SetRenderWindow(m_renderWindow);
-    it->SetInteractorStyle(m_style);
+    //it->SetInteractorStyle(m_style);
 
 
-    QPushButton* btn = new QPushButton(this);
-    connect(btn, &QPushButton::clicked, this, [this]{
-        m_markerAssembly->setText("CCCCC");
-        m_markerAssembly->setColor(1.0, 0, 0);
-        m_renderWindow->Render();
-    });
+    // QPushButton* btn = new QPushButton(this);
+    // connect(btn, &QPushButton::clicked, this, [this]{
+    //     m_markerAssembly->setText("CCCCC");
+    //     m_markerAssembly->setColor(1.0, 0, 0);
+    //     m_renderWindow->Render();
+    // });
 }
 
 void VTKOpenGLWidget::createTestData()
 {
-    #if 0
     vtkNew<vtkCylinderSource> cylinder;
     cylinder->SetRadius(5);
     cylinder->SetHeight(20);
@@ -148,34 +151,23 @@ void VTKOpenGLWidget::createTestData()
     vtkNew<vtkActor> cylinderActor;
     cylinderActor->SetMapper(cylinderMapper);
 
+    m_renderer->AddActor(cylinderActor);
 
-
-    vtkNew<vtkVectorText> text;
-    text->SetText("ABC");
 
     vtkNew<vtkTransform> textTransform;
-    textTransform->Translate(-2, 10, 0);
+    textTransform->Translate(0, 10, 0);
 
-    vtkNew<vtkTransformPolyDataFilter> textTransformFilter;
-    textTransformFilter->SetInputConnection(text->GetOutputPort());
-    textTransformFilter->SetTransform(textTransform);
+    double point[3] = { 0 };
+    double newPoint[3] = { 0 };
+    textTransform->TransformPoint(point, newPoint);
 
-    vtkNew<vtkPolyDataMapper> textMapper;
-    textMapper->SetInputConnection(textTransformFilter->GetOutputPort());
+    m_captionActor->SetCaption("T1");
+    m_captionActor->ThreeDimensionalLeaderOff();
+    m_captionActor->LeaderOff();
+    m_captionActor->BorderOff();
+    m_captionActor->SetPosition(0, 0);
+    m_captionActor->SetAttachmentPoint(newPoint);
+    //m_captionActor->GetCaptionTextProperty()->SetColor(1.0, 0, 0);
 
-    vtkNew<vtkActor> textActor;
-    textActor->SetMapper(textMapper);
-
-    vtkNew<vtkAssembly> assembly;
-    assembly->AddPart(textActor);
-    assembly->AddPart(cylinderActor);
-
-    m_renderer->AddActor(assembly);
-    m_style->SetProp3D(assembly);
-
-    m_renderer->ResetCamera();
-    #endif
-
-    m_renderer->AddActor(m_markerAssembly);
-    m_style->SetProp3D(m_markerAssembly);
+    m_renderer->AddActor(m_captionActor);
 }
