@@ -42,12 +42,16 @@ void MarkerAssembly::setNormalType(const NormalType &type)
     else if (type == NormalType::Y)
     {
         m_plane->SetNormal(0, 1, 0);
-        transform->RotateX(90);
+        //transform->RotateX(90);
     }
     else if (type == NormalType::Z)
+    {
         m_plane->SetNormal(0, 0, 1);
+        transform->RotateX(180);
+    }
 
-    transform->Translate(0, 10, 0);
+
+    transform->Translate(0, -10, 0);
     m_textTransform = transform;
 }
 
@@ -77,8 +81,6 @@ MarkerAssembly::MarkerAssembly() :
 
     this->AddPart(m_textActor);
 
-    
-    setTextVisible(false);
 
 
 
