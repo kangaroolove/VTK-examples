@@ -24,6 +24,7 @@
 #include <vtkProperty2D.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
+#include "MarkerActor.h"
 
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
@@ -40,33 +41,33 @@ public:
         std::cout<<"Pressed "<<key<<endl;
 
         vtkNew<vtkTransform> transform;
-        vtkLinearTransform* userTransform = mProp3D->GetUserTransform();
+        vtkLinearTransform* userTransform = mActor->GetUserTransform();
         if (key == "Up")
         {
             transform->SetInput(userTransform);
             transform->Translate(0, 1, 0);
-            mProp3D->SetUserTransform(transform);
+            mActor->SetUserMatrix(transform->GetMatrix());
         }  
         else if (key == "Down")
         {
             transform->SetInput(userTransform);
             transform->Translate(0, -1, 0);
-            mProp3D->SetUserTransform(transform);
+            mActor->SetUserMatrix(transform->GetMatrix());
         }  
         else if (key == "Left")
         {
             transform->SetInput(userTransform);
             transform->Translate(-1, 0, 0);
-            mProp3D->SetUserTransform(transform);
+            mActor->SetUserMatrix(transform->GetMatrix());
         }
         else if (key == "Right")
         {
             transform->SetInput(userTransform);
             transform->Translate(1, 0, 0);
-            mProp3D->SetUserTransform(transform);
+            mActor->SetUserMatrix(transform->GetMatrix());
         }
 
-        double *bounds = mProp3D->GetBounds();
+        double *bounds = mActor->GetBounds();
         for (int i = 0; i < 6; ++i)
         {
             qDebug()<<i<<" = "<<bounds[i];
@@ -80,18 +81,12 @@ public:
         mActor = actor;
     }
 
-    void SetProp3D(vtkProp3D *prop3D)
-    {
-        mProp3D = prop3D;
-    }
-
     void SetRenderWindow(vtkGenericOpenGLRenderWindow* window)
     {
         mRenderWindow = window;
     }
 private:
     vtkActor* mActor = nullptr;
-    vtkProp3D* mProp3D = nullptr;
     vtkGenericOpenGLRenderWindow* mRenderWindow = nullptr;
 };
 vtkStandardNewMacro(KeyPressInteractorStyle);
@@ -103,6 +98,8 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     , m_style(vtkSmartPointer<KeyPressInteractorStyle>::New())
     , m_markerAssembly(vtkSmartPointer<MarkerAssembly>::New())
     , m_captionActor(vtkSmartPointer<vtkCaptionActor2D>::New())
+    , m_transform(vtkSmartPointer<vtkTransform>::New())
+    , m_markerActor(vtkSmartPointer<MarkerActor>::New())
 {
     initialize();
     createTestData();
@@ -120,7 +117,7 @@ void VTKOpenGLWidget::initialize()
 
     auto it = m_renderWindow->GetInteractor();
     m_style->SetRenderWindow(m_renderWindow);
-    //it->SetInteractorStyle(m_style);
+    it->SetInteractorStyle(m_style);
 
 
     // QPushButton* btn = new QPushButton(this);
@@ -133,41 +130,49 @@ void VTKOpenGLWidget::initialize()
 
 void VTKOpenGLWidget::createTestData()
 {
-    vtkNew<vtkCylinderSource> cylinder;
-    cylinder->SetRadius(5);
-    cylinder->SetHeight(20);
-    cylinder->SetResolution(100);
+    // vtkNew<vtkCylinderSource> cylinder;
+    // cylinder->SetRadius(5);
+    // cylinder->SetHeight(20);
+    // cylinder->SetResolution(100);
 
-    vtkNew<vtkTransform> cylinderTransform;
-    cylinderTransform->RotateX(90);
+    // vtkNew<vtkTransform> cylinderTransform;
+    // cylinderTransform->RotateX(90);
 
-    vtkNew<vtkTransformPolyDataFilter> cylinderTransformFilter;
-    cylinderTransformFilter->SetInputConnection(cylinder->GetOutputPort());
-    cylinderTransformFilter->SetTransform(cylinderTransform);
+    // vtkNew<vtkTransformPolyDataFilter> cylinderTransformFilter;
+    // cylinderTransformFilter->SetInputConnection(cylinder->GetOutputPort());
+    // cylinderTransformFilter->SetTransform(cylinderTransform);
 
-    vtkNew<vtkPolyDataMapper> cylinderMapper;
-    cylinderMapper->SetInputConnection(cylinderTransformFilter->GetOutputPort());
+    // vtkNew<vtkPolyDataMapper> cylinderMapper;
+    // cylinderMapper->SetInputConnection(cylinderTransformFilter->GetOutputPort());
 
-    vtkNew<vtkActor> cylinderActor;
-    cylinderActor->SetMapper(cylinderMapper);
+    // vtkNew<vtkActor> cylinderActor;
+    // cylinderActor->SetMapper(cylinderMapper);
+    // cylinderActor->SetUserTransform(m_transform);
 
-    m_renderer->AddActor(cylinderActor);
+    // m_renderer->AddActor(cylinderActor);
+
+    // m_style->SetActor(cylinderActor);
 
 
-    vtkNew<vtkTransform> textTransform;
-    textTransform->Translate(0, 10, 0);
 
-    double point[3] = { 0 };
-    double newPoint[3] = { 0 };
-    textTransform->TransformPoint(point, newPoint);
+    // vtkNew<vtkTransform> textTransform;
+    // textTransform->SetInput(m_transform);
+    // textTransform->Translate(0, 10, 0);
 
-    m_captionActor->SetCaption("T1");
-    m_captionActor->ThreeDimensionalLeaderOff();
-    m_captionActor->LeaderOff();
-    m_captionActor->BorderOff();
-    m_captionActor->SetPosition(0, 0);
-    m_captionActor->SetAttachmentPoint(newPoint);
-    //m_captionActor->GetCaptionTextProperty()->SetColor(1.0, 0, 0);
+    // double point[3] = { 0 };
+    // double newPoint[3] = { 0 };
+    // textTransform->TransformPoint(point, newPoint);
 
-    m_renderer->AddActor(m_captionActor);
+    // m_captionActor->SetCaption("T1");
+    // m_captionActor->ThreeDimensionalLeaderOff();
+    // m_captionActor->LeaderOff();
+    // m_captionActor->BorderOff();
+    // m_captionActor->SetPosition(0, 0);
+    // m_captionActor->SetAttachmentPoint(newPoint);
+    // //m_captionActor->GetCaptionTextProperty()->SetColor(1.0, 0, 0);
+
+    // m_renderer->AddActor(m_captionActor);
+
+    m_renderer->AddActor(m_markerActor);
+    m_renderer->ResetCamera();
 }

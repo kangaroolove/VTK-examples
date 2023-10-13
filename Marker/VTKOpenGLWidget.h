@@ -8,6 +8,8 @@ class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
 class KeyPressInteractorStyle;
 class MarkerAssembly;
+class vtkTransform;
+class MarkerActor;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget
 {
@@ -24,4 +26,6 @@ private:
     vtkSmartPointer<KeyPressInteractorStyle> m_style;
     vtkSmartPointer<MarkerAssembly> m_markerAssembly;
     vtkSmartPointer<vtkCaptionActor2D> m_captionActor;
+    vtkSmartPointer<vtkTransform> m_transform;
+    vtkSmartPointer<MarkerActor> m_markerActor;
 };
