@@ -3,6 +3,7 @@
 #include <vtkProp3D.h>
 #include <vtkObjectFactory.h>
 #include <vtkSmartPointer.h>
+#include <vtkColor.h>
 
 class vtkCaptionActor2D;
 class vtkSphereSource;
@@ -30,10 +31,12 @@ public:
     void setText(const std::string& text);
     void setStlFileName(const std::string& fileName);
     void setTextVisible(const bool& visible);
+    void setColor(const vtkColor3d& color);
 private:
     MarkerPointActor();
     ~MarkerPointActor();
     void updateProps();
+    void updateColor();
 
     double m_bounds[6];
     double m_origin[3];
@@ -41,6 +44,7 @@ private:
     std::string m_text;
     std::string m_stlFileName;
     bool m_textVisible;
+    vtkColor3d m_color;
     vtkSmartPointer<vtkCaptionActor2D> m_captionActor;
     vtkSmartPointer<vtkSphereSource> m_sphereSource;
     vtkSmartPointer<vtkActor> m_actor;

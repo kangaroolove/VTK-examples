@@ -7,6 +7,10 @@
 #include <vtkPlane.h>
 #include <vtkSTLReader.h>
 #include <vtkSphereSource.h>
+#include <vtkProperty.h>
+#include <vtkTextProperty.h>
+#include <vtkTextActor.h>
+#include <vtkProperty2D.h>
 
 vtkStandardNewMacro(MarkerPointActor)
 
@@ -111,6 +115,11 @@ void MarkerPointActor::setTextVisible(const bool &visible)
 {
 }
 
+void MarkerPointActor::setColor(const vtkColor3d &color)
+{
+    m_color = color;
+}
+
 MarkerPointActor::MarkerPointActor() :
     m_bounds{ 0 },
     m_captionActor(vtkSmartPointer<vtkCaptionActor2D>::New()),
@@ -120,10 +129,13 @@ MarkerPointActor::MarkerPointActor() :
     m_cutter(vtkSmartPointer<vtkCutter>::New()),
     m_plane(vtkSmartPointer<vtkPlane>::New()),
     m_reader(vtkSmartPointer<vtkSTLReader>::New()),
-    m_textVisible(false),
+    m_textVisible(true),
     m_origin{ 0 },
-    m_normal{ 0, 0, 1 }
+    m_normal{ 0, 0, 1 },
+    m_color(1.0, 0.0, 0.0)
 {
+    m_text = "T1";
+
     m_captionActor->ThreeDimensionalLeaderOff();
     m_captionActor->LeaderOff();
     m_captionActor->BorderOff();
@@ -147,13 +159,13 @@ void MarkerPointActor::updateProps()
     m_plane->SetOrigin(m_origin);
     m_plane->SetNormal(m_normal);
 
-    if (m_text.empty())
+    if (m_stlFileName.empty())
     {
         m_sphereSource->SetRadius(5);
         m_sphereSource->SetCenter(0, 0, 0);
         m_sphereSource->SetPhiResolution(100);
         m_sphereSource->SetThetaResolution(100);
-        
+
         m_cutter->SetInputConnection(m_sphereSource->GetOutputPort());
     }
     else 
@@ -166,6 +178,8 @@ void MarkerPointActor::updateProps()
 
     m_mapper->SetInputConnection(m_cutter->GetOutputPort());
     m_mapper->GetInputAlgorithm()->Update();
+
+    updateColor();
 
     if (this->GetUserTransform())
         m_actor->SetUserTransform(nullptr);
@@ -184,6 +198,26 @@ void MarkerPointActor::updateProps()
         transform->TransformPoint(pos, newPos);
         m_captionActor->SetAttachmentPoint(newPos);
     }
+
+
+}
+
+void MarkerPointActor::updateColor()
+{
+    m_actor->GetProperty()->SetColor(m_color.GetData());
+    //m_captionActor->GetCaptionTextProperty()->SetColor(m_color.GetData());
+    //m_captionActor->GetCaptionTextProperty()->SetFrameColor(m_color.GetData());
+    //m_captionActor->GetCaptionTextProperty()->FrameOff();
+    //m_captionActor->GetCaptionTextProperty()->SetFontFamilyToTimes();
+    //m_captionActor->GetCaptionTextProperty()->SetBold(false);
+    //m_captionActor->GetCaptionTextProperty()->SetBold(false);
+
+    m_captionActor->GetTextActor()->GetProperty()->SetColor(1.0, 1.0, 0.0);
+    //m_captionActor->GetCaptionTextProperty()->SetBackgroundColor(m_color.GetData());
+    //m_captionActor->GetCaptionTextProperty()->SetBackgroundOpacity(1.0);
+    //m_captionActor->GetCaptionTextProperty()->SetFrameColor(m_color.GetData());
+
+    //m_captionActor->GetCaptionTextProperty()->SetFrameWidth(0);
 }
 
 double *MarkerPointActor::GetBounds()
