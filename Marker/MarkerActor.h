@@ -25,6 +25,7 @@ public:
     int RenderOverlay(vtkViewport *viewport) override;
     vtkTypeBool HasTranslucentPolygonalGeometry() override;
     void setOrigin(double x, double y, double z);
+    void setNormal(double x, double y, double z);
     void setText(const std::string& text);
 private:
     MarkerActor();
@@ -33,6 +34,7 @@ private:
 
     double m_bounds[6];
     double m_origin[3];
+    double m_normal[3];
     std::string m_text;
     vtkTypeBool hasText;
     vtkSmartPointer<vtkCaptionActor2D> m_captionActor;

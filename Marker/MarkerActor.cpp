@@ -89,6 +89,13 @@ void MarkerActor::setOrigin(double x, double y, double z)
     m_origin[2] = z;
 }
 
+void MarkerActor::setNormal(double x, double y, double z)
+{
+    m_normal[0] = x;
+    m_normal[1] = y;
+    m_normal[2] = z;
+}
+
 void MarkerActor::setText(const std::string &text)
 {
     m_text = text;
@@ -103,7 +110,8 @@ MarkerActor::MarkerActor() :
     m_cutter(vtkSmartPointer<vtkCutter>::New()),
     m_plane(vtkSmartPointer<vtkPlane>::New()),
     hasText(true),
-    m_origin{ 0 }
+    m_origin{ 0 },
+    m_normal{ 0, 0, 1 }
 {
     m_captionActor->ThreeDimensionalLeaderOff();
     m_captionActor->LeaderOff();
@@ -114,8 +122,8 @@ MarkerActor::MarkerActor() :
     m_cylinderSource->SetResolution(100);
     m_cylinderSource->SetHeight(20.0);
 
-    m_plane->SetOrigin(0, 0, 0);
-    m_plane->SetNormal(0, 0, 1);
+    m_plane->SetOrigin(m_origin);
+    m_plane->SetNormal(m_normal);
 
     m_cutter->SetCutFunction(m_plane);
     m_actor->SetMapper(m_mapper);
@@ -130,6 +138,7 @@ MarkerActor::~MarkerActor()
 void MarkerActor::updateProps()
 {
     m_plane->SetOrigin(m_origin);
+    m_plane->SetNormal(m_normal);
 
     m_cutter->SetInputConnection(m_cylinderSource->GetOutputPort());
     m_mapper->SetInputConnection(m_cutter->GetOutputPort());
