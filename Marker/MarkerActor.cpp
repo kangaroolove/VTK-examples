@@ -6,6 +6,7 @@
 #include <vtkLinearTransform.h>
 #include <vtkCutter.h>
 #include <vtkPlane.h>
+#include <vtkSTLReader.h>
 
 vtkStandardNewMacro(MarkerActor)
 
@@ -28,7 +29,7 @@ int MarkerActor::RenderOpaqueGeometry(vtkViewport *viewport)
 
   renderedSomething += this->m_actor->RenderOpaqueGeometry( viewport );
 
-  if ( this->hasText )
+  if (this->m_textVisible)
     renderedSomething += this->m_captionActor->RenderOpaqueGeometry( viewport );
 
   renderedSomething = (renderedSomething > 0)?(1):(0);
@@ -43,7 +44,7 @@ int MarkerActor::RenderTranslucentPolygonalGeometry(vtkViewport *viewport)
 
   renderedSomething += this->m_actor->RenderTranslucentPolygonalGeometry( viewport );
 
-  if ( this->hasText )
+  if (this->m_textVisible)
     renderedSomething += this->m_captionActor->RenderTranslucentPolygonalGeometry( viewport );
 
   renderedSomething = (renderedSomething > 0)?(1):(0);
@@ -54,7 +55,7 @@ int MarkerActor::RenderOverlay(vtkViewport *viewport)
 {
     int renderedSomething = 0;
 
-    if ( !this->hasText )
+    if ( !this->m_textVisible )
     {
         return renderedSomething;
     }
@@ -75,7 +76,7 @@ vtkTypeBool MarkerActor::HasTranslucentPolygonalGeometry()
 
   result |= this->m_actor->HasTranslucentPolygonalGeometry();
 
-  if ( this->hasText )
+  if (this->m_textVisible)
   {
     result |= this->m_captionActor->HasTranslucentPolygonalGeometry();
   }
@@ -101,6 +102,20 @@ void MarkerActor::setText(const std::string &text)
     m_text = text;
 }
 
+void MarkerActor::setMarkerActorDataFrom(const MarkerActorDataFrom &dataFrom)
+{
+    m_dataFrom = dataFrom;
+}
+
+void MarkerActor::setStlFileName(const std::string &fileName)
+{
+    m_stlFileName = fileName;
+}
+
+void MarkerActor::setTextVisible(const bool &visible)
+{
+}
+
 MarkerActor::MarkerActor() :
     m_bounds{ 0 },
     m_captionActor(vtkSmartPointer<vtkCaptionActor2D>::New()),
@@ -109,7 +124,8 @@ MarkerActor::MarkerActor() :
     m_mapper(vtkSmartPointer<vtkPolyDataMapper>::New()),
     m_cutter(vtkSmartPointer<vtkCutter>::New()),
     m_plane(vtkSmartPointer<vtkPlane>::New()),
-    hasText(true),
+    m_reader(vtkSmartPointer<vtkSTLReader>::New()),
+    m_textVisible(true),
     m_origin{ 0 },
     m_normal{ 0, 0, 1 }
 {

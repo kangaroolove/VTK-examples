@@ -11,6 +11,13 @@ class vtkPolyDataMapper;
 class vtkLinearTransform;
 class vtkCutter;
 class vtkPlane;
+class vtkSTLReader;
+
+enum class MarkerActorDataFrom
+{
+    STL,
+    INTERNAL
+};
 
 class MarkerActor : public vtkProp3D
 {
@@ -27,6 +34,9 @@ public:
     void setOrigin(double x, double y, double z);
     void setNormal(double x, double y, double z);
     void setText(const std::string& text);
+    void setMarkerActorDataFrom(const MarkerActorDataFrom& dataFrom);
+    void setStlFileName(const std::string& fileName);
+    void setTextVisible(const bool& visible);
 private:
     MarkerActor();
     ~MarkerActor();
@@ -36,11 +46,14 @@ private:
     double m_origin[3];
     double m_normal[3];
     std::string m_text;
-    vtkTypeBool hasText;
+    std::string m_stlFileName;
+    bool m_textVisible;
+    MarkerActorDataFrom m_dataFrom;
     vtkSmartPointer<vtkCaptionActor2D> m_captionActor;
     vtkSmartPointer<vtkCylinderSource> m_cylinderSource;
     vtkSmartPointer<vtkActor> m_actor;
     vtkSmartPointer<vtkPolyDataMapper> m_mapper;
+    vtkSmartPointer<vtkSTLReader> m_reader;
     vtkSmartPointer<vtkCutter> m_cutter;
     vtkSmartPointer<vtkPlane> m_plane;
 };
