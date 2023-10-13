@@ -13,12 +13,6 @@ class vtkCutter;
 class vtkPlane;
 class vtkSTLReader;
 
-enum class MarkerActorDataFrom
-{
-    STL,
-    INTERNAL
-};
-
 class MarkerPointActor : public vtkProp3D
 {
 public:
@@ -34,7 +28,6 @@ public:
     void setOrigin(double x, double y, double z);
     void setNormal(double x, double y, double z);
     void setText(const std::string& text);
-    void setMarkerActorDataFrom(const MarkerActorDataFrom& dataFrom);
     void setStlFileName(const std::string& fileName);
     void setTextVisible(const bool& visible);
 private:
@@ -48,7 +41,6 @@ private:
     std::string m_text;
     std::string m_stlFileName;
     bool m_textVisible;
-    MarkerActorDataFrom m_dataFrom;
     vtkSmartPointer<vtkCaptionActor2D> m_captionActor;
     vtkSmartPointer<vtkSphereSource> m_sphereSource;
     vtkSmartPointer<vtkActor> m_actor;

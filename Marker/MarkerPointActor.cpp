@@ -102,11 +102,6 @@ void MarkerPointActor::setText(const std::string &text)
     m_text = text;
 }
 
-void MarkerPointActor::setMarkerActorDataFrom(const MarkerActorDataFrom &dataFrom)
-{
-    m_dataFrom = dataFrom;
-}
-
 void MarkerPointActor::setStlFileName(const std::string &fileName)
 {
     m_stlFileName = fileName;
@@ -134,11 +129,6 @@ MarkerPointActor::MarkerPointActor() :
     m_captionActor->BorderOff();
     m_captionActor->SetPosition(0, 0);
 
-    m_sphereSource->SetRadius(5);
-    m_sphereSource->SetCenter(0, 0, 0);
-    m_sphereSource->SetPhiResolution(100);
-    m_sphereSource->SetThetaResolution(100);
-
     m_plane->SetOrigin(m_origin);
     m_plane->SetNormal(m_normal);
 
@@ -157,7 +147,23 @@ void MarkerPointActor::updateProps()
     m_plane->SetOrigin(m_origin);
     m_plane->SetNormal(m_normal);
 
-    m_cutter->SetInputConnection(m_sphereSource->GetOutputPort());
+    if (m_text.empty())
+    {
+        m_sphereSource->SetRadius(5);
+        m_sphereSource->SetCenter(0, 0, 0);
+        m_sphereSource->SetPhiResolution(100);
+        m_sphereSource->SetThetaResolution(100);
+        
+        m_cutter->SetInputConnection(m_sphereSource->GetOutputPort());
+    }
+    else 
+    {
+        m_reader->SetFileName(m_stlFileName.c_str());
+        m_reader->Update();
+
+        m_cutter->SetInputConnection(m_reader->GetOutputPort());
+    }
+
     m_mapper->SetInputConnection(m_cutter->GetOutputPort());
     m_mapper->GetInputAlgorithm()->Update();
 
