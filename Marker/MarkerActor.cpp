@@ -3,8 +3,20 @@
 #include <vtkCylinderSource.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
+#include <vtkLinearTransform.h>
 
 vtkStandardNewMacro(MarkerActor)
+
+void MarkerActor::GetBounds(double bounds[6])
+{
+    const double *bds = this->GetBounds();
+    bounds[0] = bds[0];
+    bounds[1] = bds[1];
+    bounds[2] = bds[2];
+    bounds[3] = bds[3];
+    bounds[4] = bds[4];
+    bounds[5] = bds[5];
+}
 
 int MarkerActor::RenderOpaqueGeometry(vtkViewport *viewport)
 {
@@ -42,7 +54,7 @@ int MarkerActor::RenderOverlay(vtkViewport *viewport)
 
     if ( !this->hasText )
     {
-    return renderedSomething;
+        return renderedSomething;
     }
 
     this->updateProps();
@@ -82,7 +94,6 @@ MarkerActor::MarkerActor()
     m_text->BorderOff();
     m_text->SetPosition(0, 0);
 
-
     m_cylinderSource->SetHeight(20.0);
     m_actor->SetMapper(m_mapper);
 
@@ -98,10 +109,26 @@ void MarkerActor::updateProps()
     m_cylinderSource->SetRadius(5);
     m_cylinderSource->SetResolution(100);
 
-
     vtkPolyDataMapper::SafeDownCast(this->m_actor->GetMapper())->SetInputConnection(m_cylinderSource->GetOutputPort());
 
     vtkPolyDataMapper::SafeDownCast(this->m_actor->GetMapper())->GetInputAlgorithm()->Update();
+
+    if (this->GetUserTransform())
+        m_actor->SetUserTransform(nullptr);
+
+    m_text->SetAttachmentPoint(0, 0, 0);
+
+    vtkLinearTransform* transform = this->GetUserTransform();
+    if (transform)
+    {
+        m_actor->SetUserTransform(transform);
+
+        double newPos[3];
+        double *pos = this->m_text->GetAttachmentPoint();
+
+        transform->TransformPoint(pos, newPos);
+        m_text->SetAttachmentPoint(newPos);
+    }
 }
 
 double *MarkerActor::GetBounds()

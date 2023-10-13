@@ -41,33 +41,33 @@ public:
         std::cout<<"Pressed "<<key<<endl;
 
         vtkNew<vtkTransform> transform;
-        vtkLinearTransform* userTransform = mActor->GetUserTransform();
+        vtkLinearTransform* userTransform = mProp->GetUserTransform();
         if (key == "Up")
         {
             transform->SetInput(userTransform);
             transform->Translate(0, 1, 0);
-            mActor->SetUserMatrix(transform->GetMatrix());
+            mProp->SetUserMatrix(transform->GetMatrix());
         }  
         else if (key == "Down")
         {
             transform->SetInput(userTransform);
             transform->Translate(0, -1, 0);
-            mActor->SetUserMatrix(transform->GetMatrix());
+            mProp->SetUserMatrix(transform->GetMatrix());
         }  
         else if (key == "Left")
         {
             transform->SetInput(userTransform);
             transform->Translate(-1, 0, 0);
-            mActor->SetUserMatrix(transform->GetMatrix());
+            mProp->SetUserMatrix(transform->GetMatrix());
         }
         else if (key == "Right")
         {
             transform->SetInput(userTransform);
             transform->Translate(1, 0, 0);
-            mActor->SetUserMatrix(transform->GetMatrix());
+            mProp->SetUserMatrix(transform->GetMatrix());
         }
 
-        double *bounds = mActor->GetBounds();
+        double *bounds = mProp->GetBounds();
         for (int i = 0; i < 6; ++i)
         {
             qDebug()<<i<<" = "<<bounds[i];
@@ -81,12 +81,18 @@ public:
         mActor = actor;
     }
 
+    void setProp3D(vtkProp3D *prop)
+    {
+        mProp = prop;
+    }
+
     void SetRenderWindow(vtkGenericOpenGLRenderWindow* window)
     {
         mRenderWindow = window;
     }
 private:
     vtkActor* mActor = nullptr;
+    vtkProp3D* mProp = nullptr;
     vtkGenericOpenGLRenderWindow* mRenderWindow = nullptr;
 };
 vtkStandardNewMacro(KeyPressInteractorStyle);
@@ -174,5 +180,5 @@ void VTKOpenGLWidget::createTestData()
     // m_renderer->AddActor(m_captionActor);
 
     m_renderer->AddActor(m_markerActor);
-    m_renderer->ResetCamera();
+    m_style->setProp3D(m_markerActor);
 }
