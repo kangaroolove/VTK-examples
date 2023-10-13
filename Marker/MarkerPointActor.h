@@ -19,11 +19,11 @@ enum class MarkerActorDataFrom
     INTERNAL
 };
 
-class MarkerActor : public vtkProp3D
+class MarkerPointActor : public vtkProp3D
 {
 public:
-    vtkTypeMacro(MarkerActor, vtkProp3D);
-    static MarkerActor* New();
+    vtkTypeMacro(MarkerPointActor, vtkProp3D);
+    static MarkerPointActor* New();
 
     void GetBounds(double bounds[6]);
     double *GetBounds() VTK_SIZEHINT(6) override;
@@ -38,8 +38,8 @@ public:
     void setStlFileName(const std::string& fileName);
     void setTextVisible(const bool& visible);
 private:
-    MarkerActor();
-    ~MarkerActor();
+    MarkerPointActor();
+    ~MarkerPointActor();
     void updateProps();
 
     double m_bounds[6];

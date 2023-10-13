@@ -40,8 +40,8 @@ set(PROJECT_SOURCES
     MarkerAssembly.h
     Widget.h
     Widget.cpp
-    MarkerActor.cpp
-    MarkerActor.h
+    MarkerPointActor.cpp
+    MarkerPointActor.h
 )
 
 set(PROJECT_UIS

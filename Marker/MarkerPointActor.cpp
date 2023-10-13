@@ -1,4 +1,4 @@
-#include "MarkerActor.h"
+#include "MarkerPointActor.h"
 #include <vtkCaptionActor2D.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
@@ -8,9 +8,9 @@
 #include <vtkSTLReader.h>
 #include <vtkSphereSource.h>
 
-vtkStandardNewMacro(MarkerActor)
+vtkStandardNewMacro(MarkerPointActor)
 
-void MarkerActor::GetBounds(double bounds[6])
+void MarkerPointActor::GetBounds(double bounds[6])
 {
     const double *bds = this->GetBounds();
     bounds[0] = bds[0];
@@ -21,7 +21,7 @@ void MarkerActor::GetBounds(double bounds[6])
     bounds[5] = bds[5];
 }
 
-int MarkerActor::RenderOpaqueGeometry(vtkViewport *viewport)
+int MarkerPointActor::RenderOpaqueGeometry(vtkViewport *viewport)
 {
   int renderedSomething = 0;
 
@@ -36,7 +36,7 @@ int MarkerActor::RenderOpaqueGeometry(vtkViewport *viewport)
   return renderedSomething;
 }
 
-int MarkerActor::RenderTranslucentPolygonalGeometry(vtkViewport *viewport)
+int MarkerPointActor::RenderTranslucentPolygonalGeometry(vtkViewport *viewport)
 {
   int renderedSomething = 0;
 
@@ -51,7 +51,7 @@ int MarkerActor::RenderTranslucentPolygonalGeometry(vtkViewport *viewport)
   return renderedSomething;
 }
 
-int MarkerActor::RenderOverlay(vtkViewport *viewport)
+int MarkerPointActor::RenderOverlay(vtkViewport *viewport)
 {
     int renderedSomething = 0;
 
@@ -68,7 +68,7 @@ int MarkerActor::RenderOverlay(vtkViewport *viewport)
     return renderedSomething;
 }
 
-vtkTypeBool MarkerActor::HasTranslucentPolygonalGeometry()
+vtkTypeBool MarkerPointActor::HasTranslucentPolygonalGeometry()
 {
   int result = 0;
 
@@ -83,40 +83,40 @@ vtkTypeBool MarkerActor::HasTranslucentPolygonalGeometry()
   return result;
 }
 
-void MarkerActor::setOrigin(double x, double y, double z)
+void MarkerPointActor::setOrigin(double x, double y, double z)
 {
     m_origin[0] = x;
     m_origin[1] = y;
     m_origin[2] = z;
 }
 
-void MarkerActor::setNormal(double x, double y, double z)
+void MarkerPointActor::setNormal(double x, double y, double z)
 {
     m_normal[0] = x;
     m_normal[1] = y;
     m_normal[2] = z;
 }
 
-void MarkerActor::setText(const std::string &text)
+void MarkerPointActor::setText(const std::string &text)
 {
     m_text = text;
 }
 
-void MarkerActor::setMarkerActorDataFrom(const MarkerActorDataFrom &dataFrom)
+void MarkerPointActor::setMarkerActorDataFrom(const MarkerActorDataFrom &dataFrom)
 {
     m_dataFrom = dataFrom;
 }
 
-void MarkerActor::setStlFileName(const std::string &fileName)
+void MarkerPointActor::setStlFileName(const std::string &fileName)
 {
     m_stlFileName = fileName;
 }
 
-void MarkerActor::setTextVisible(const bool &visible)
+void MarkerPointActor::setTextVisible(const bool &visible)
 {
 }
 
-MarkerActor::MarkerActor() :
+MarkerPointActor::MarkerPointActor() :
     m_bounds{ 0 },
     m_captionActor(vtkSmartPointer<vtkCaptionActor2D>::New()),
     m_sphereSource(vtkSmartPointer<vtkSphereSource>::New()),
@@ -148,11 +148,11 @@ MarkerActor::MarkerActor() :
     this->updateProps();
 }
 
-MarkerActor::~MarkerActor()
+MarkerPointActor::~MarkerPointActor()
 {
 }
 
-void MarkerActor::updateProps()
+void MarkerPointActor::updateProps()
 {
     m_plane->SetOrigin(m_origin);
     m_plane->SetNormal(m_normal);
@@ -180,7 +180,7 @@ void MarkerActor::updateProps()
     }
 }
 
-double *MarkerActor::GetBounds()
+double *MarkerPointActor::GetBounds()
 {
     double bounds[6];
     this->m_actor->GetBounds(bounds);

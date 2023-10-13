@@ -24,7 +24,7 @@
 #include <vtkProperty2D.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
-#include "MarkerActor.h"
+#include "MarkerPointActor.h"
 
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
@@ -105,7 +105,7 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     , m_markerAssembly(vtkSmartPointer<MarkerAssembly>::New())
     , m_captionActor(vtkSmartPointer<vtkCaptionActor2D>::New())
     , m_transform(vtkSmartPointer<vtkTransform>::New())
-    , m_markerActor(vtkSmartPointer<MarkerActor>::New())
+    , m_markerActor(vtkSmartPointer<MarkerPointActor>::New())
 {
     initialize();
     createTestData();
