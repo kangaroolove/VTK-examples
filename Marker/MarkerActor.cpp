@@ -1,12 +1,12 @@
 #include "MarkerActor.h"
 #include <vtkCaptionActor2D.h>
-#include <vtkCylinderSource.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
 #include <vtkLinearTransform.h>
 #include <vtkCutter.h>
 #include <vtkPlane.h>
 #include <vtkSTLReader.h>
+#include <vtkSphereSource.h>
 
 vtkStandardNewMacro(MarkerActor)
 
@@ -119,13 +119,13 @@ void MarkerActor::setTextVisible(const bool &visible)
 MarkerActor::MarkerActor() :
     m_bounds{ 0 },
     m_captionActor(vtkSmartPointer<vtkCaptionActor2D>::New()),
-    m_cylinderSource(vtkSmartPointer<vtkCylinderSource>::New()),
+    m_sphereSource(vtkSmartPointer<vtkSphereSource>::New()),
     m_actor(vtkSmartPointer<vtkActor>::New()),
     m_mapper(vtkSmartPointer<vtkPolyDataMapper>::New()),
     m_cutter(vtkSmartPointer<vtkCutter>::New()),
     m_plane(vtkSmartPointer<vtkPlane>::New()),
     m_reader(vtkSmartPointer<vtkSTLReader>::New()),
-    m_textVisible(true),
+    m_textVisible(false),
     m_origin{ 0 },
     m_normal{ 0, 0, 1 }
 {
@@ -134,9 +134,10 @@ MarkerActor::MarkerActor() :
     m_captionActor->BorderOff();
     m_captionActor->SetPosition(0, 0);
 
-    m_cylinderSource->SetRadius(5);
-    m_cylinderSource->SetResolution(100);
-    m_cylinderSource->SetHeight(20.0);
+    m_sphereSource->SetRadius(5);
+    m_sphereSource->SetCenter(0, 0, 0);
+    m_sphereSource->SetPhiResolution(100);
+    m_sphereSource->SetThetaResolution(100);
 
     m_plane->SetOrigin(m_origin);
     m_plane->SetNormal(m_normal);
@@ -156,7 +157,7 @@ void MarkerActor::updateProps()
     m_plane->SetOrigin(m_origin);
     m_plane->SetNormal(m_normal);
 
-    m_cutter->SetInputConnection(m_cylinderSource->GetOutputPort());
+    m_cutter->SetInputConnection(m_sphereSource->GetOutputPort());
     m_mapper->SetInputConnection(m_cutter->GetOutputPort());
     m_mapper->GetInputAlgorithm()->Update();
 

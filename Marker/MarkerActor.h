@@ -5,7 +5,7 @@
 #include <vtkSmartPointer.h>
 
 class vtkCaptionActor2D;
-class vtkCylinderSource;
+class vtkSphereSource;
 class vtkActor;
 class vtkPolyDataMapper;
 class vtkLinearTransform;
@@ -50,7 +50,7 @@ private:
     bool m_textVisible;
     MarkerActorDataFrom m_dataFrom;
     vtkSmartPointer<vtkCaptionActor2D> m_captionActor;
-    vtkSmartPointer<vtkCylinderSource> m_cylinderSource;
+    vtkSmartPointer<vtkSphereSource> m_sphereSource;
     vtkSmartPointer<vtkActor> m_actor;
     vtkSmartPointer<vtkPolyDataMapper> m_mapper;
     vtkSmartPointer<vtkSTLReader> m_reader;
