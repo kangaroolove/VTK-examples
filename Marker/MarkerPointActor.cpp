@@ -36,7 +36,7 @@ int MarkerPointActor::RenderOpaqueGeometry(vtkViewport *viewport)
   if (this->m_textVisible)
     renderedSomething += this->m_captionActor->RenderOpaqueGeometry( viewport );
 
-  renderedSomething = (renderedSomething > 0)?(1):(0);
+  renderedSomething = (renderedSomething > 0) ? (1) : (0);
   return renderedSomething;
 }
 
@@ -51,7 +51,7 @@ int MarkerPointActor::RenderTranslucentPolygonalGeometry(vtkViewport *viewport)
   if (this->m_textVisible)
     renderedSomething += this->m_captionActor->RenderTranslucentPolygonalGeometry( viewport );
 
-  renderedSomething = (renderedSomething > 0)?(1):(0);
+  renderedSomething = (renderedSomething > 0) ? (1) : (0);
   return renderedSomething;
 }
 
@@ -68,7 +68,7 @@ int MarkerPointActor::RenderOverlay(vtkViewport *viewport)
 
     renderedSomething += this->m_captionActor->RenderOverlay( viewport );
 
-    renderedSomething = (renderedSomething > 0)?(1):(0);
+    renderedSomething = (renderedSomething > 0) ? (1) : (0);
     return renderedSomething;
 }
 
