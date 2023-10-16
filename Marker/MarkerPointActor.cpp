@@ -59,7 +59,7 @@ int MarkerPointActor::RenderOverlay(vtkViewport *viewport)
 {
     int renderedSomething = 0;
 
-    if ( !this->m_textVisible )
+    if (!this->m_textVisible)
     {
         return renderedSomething;
     }
@@ -113,6 +113,7 @@ void MarkerPointActor::setStlFileName(const std::string &fileName)
 
 void MarkerPointActor::setTextVisible(const bool &visible)
 {
+    m_textVisible = visible;
 }
 
 void MarkerPointActor::setColor(const vtkColor3d &color)
