@@ -53,4 +53,6 @@ private:
     vtkSmartPointer<vtkSTLReader> m_reader;
     vtkSmartPointer<vtkCutter> m_cutter;
     vtkSmartPointer<vtkPlane> m_plane;
+    vtkSmartPointer<vtkActor> m_boundActor;
+    vtkSmartPointer<vtkPolyDataMapper> m_boundMapper;
 };

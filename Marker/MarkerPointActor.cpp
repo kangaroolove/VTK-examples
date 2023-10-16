@@ -130,10 +130,12 @@ MarkerPointActor::MarkerPointActor() :
     m_cutter(vtkSmartPointer<vtkCutter>::New()),
     m_plane(vtkSmartPointer<vtkPlane>::New()),
     m_reader(vtkSmartPointer<vtkSTLReader>::New()),
+    m_boundActor(vtkSmartPointer<vtkActor>::New()),
+    m_boundMapper(vtkSmartPointer<vtkPolyDataMapper>::New()),
     m_textVisible(true),
     m_origin{ 0 },
     m_normal{ 0, 0, 1 },
-    m_color(1.0, 0.0, 0.0)
+    m_color(1.0, 1.0, 1.0)
 {
     m_text = "T1";
 
@@ -147,6 +149,8 @@ MarkerPointActor::MarkerPointActor() :
 
     m_cutter->SetCutFunction(m_plane);
     m_actor->SetMapper(m_mapper);
+
+    m_boundActor->SetMapper(m_boundMapper);
 
     this->updateProps();
 }
@@ -168,6 +172,7 @@ void MarkerPointActor::updateProps()
         m_sphereSource->SetThetaResolution(100);
 
         m_cutter->SetInputConnection(m_sphereSource->GetOutputPort());
+        m_boundMapper->SetInputConnection(m_sphereSource->GetOutputPort());
     }
     else 
     {
@@ -175,6 +180,7 @@ void MarkerPointActor::updateProps()
         m_reader->Update();
 
         m_cutter->SetInputConnection(m_reader->GetOutputPort());
+        m_boundMapper->SetInputConnection(m_reader->GetOutputPort());
     }
 
     m_mapper->SetInputConnection(m_cutter->GetOutputPort());
@@ -192,6 +198,7 @@ void MarkerPointActor::updateProps()
     if (transform)
     {
         m_actor->SetUserTransform(transform);
+        m_boundActor->SetUserTransform(transform);
 
         double newPos[3];
         double *pos = this->m_captionActor->GetAttachmentPoint();
@@ -215,7 +222,7 @@ bool MarkerPointActor::isDataFromStl()
 double *MarkerPointActor::GetBounds()
 {
     double bounds[6];
-    this->m_actor->GetBounds(bounds);
+    this->m_boundActor->GetBounds(bounds);
 
     for (int i = 0; i < 6; i++)
     {
