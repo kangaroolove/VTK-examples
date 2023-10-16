@@ -159,7 +159,7 @@ void MarkerPointActor::updateProps()
     m_plane->SetOrigin(m_origin);
     m_plane->SetNormal(m_normal);
 
-    if (m_stlFileName.empty())
+    if (!isDataFromStl())
     {
         m_sphereSource->SetRadius(5);
         m_sphereSource->SetCenter(0, 0, 0);
@@ -198,26 +198,17 @@ void MarkerPointActor::updateProps()
         transform->TransformPoint(pos, newPos);
         m_captionActor->SetAttachmentPoint(newPos);
     }
-
-
 }
 
 void MarkerPointActor::updateColor()
 {
     m_actor->GetProperty()->SetColor(m_color.GetData());
-    //m_captionActor->GetCaptionTextProperty()->SetColor(m_color.GetData());
-    //m_captionActor->GetCaptionTextProperty()->SetFrameColor(m_color.GetData());
-    //m_captionActor->GetCaptionTextProperty()->FrameOff();
-    //m_captionActor->GetCaptionTextProperty()->SetFontFamilyToTimes();
-    //m_captionActor->GetCaptionTextProperty()->SetBold(false);
-    //m_captionActor->GetCaptionTextProperty()->SetBold(false);
+    m_captionActor->GetTextActor()->GetProperty()->SetColor(m_color.GetData());
+}
 
-    m_captionActor->GetTextActor()->GetProperty()->SetColor(1.0, 1.0, 0.0);
-    //m_captionActor->GetCaptionTextProperty()->SetBackgroundColor(m_color.GetData());
-    //m_captionActor->GetCaptionTextProperty()->SetBackgroundOpacity(1.0);
-    //m_captionActor->GetCaptionTextProperty()->SetFrameColor(m_color.GetData());
-
-    //m_captionActor->GetCaptionTextProperty()->SetFrameWidth(0);
+bool MarkerPointActor::isDataFromStl()
+{
+    return !m_stlFileName.empty();
 }
 
 double *MarkerPointActor::GetBounds()

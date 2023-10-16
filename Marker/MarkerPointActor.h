@@ -37,6 +37,7 @@ private:
     ~MarkerPointActor();
     void updateProps();
     void updateColor();
+    bool isDataFromStl();
 
     double m_bounds[6];
     double m_origin[3];
