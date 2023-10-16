@@ -36,8 +36,6 @@ set(PROJECT_SOURCES
     main.cpp
     VTKOpenGLWidget.cpp
     VTKOpenGLWidget.h
-    MarkerAssembly.cpp
-    MarkerAssembly.h
     Widget.h
     Widget.cpp
     MarkerPointActor.cpp

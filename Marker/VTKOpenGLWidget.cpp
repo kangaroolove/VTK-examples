@@ -18,7 +18,6 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkProp3DFollower.h>
 #include <vtkTransformPolyDataFilter.h>
-#include "MarkerAssembly.h"
 #include <QPushButton>
 #include <QDebug>
 #include <vtkProperty2D.h>
@@ -102,7 +101,6 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     , m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New())
     , m_renderer(vtkSmartPointer<vtkRenderer>::New())
     , m_style(vtkSmartPointer<KeyPressInteractorStyle>::New())
-    , m_markerAssembly(vtkSmartPointer<MarkerAssembly>::New())
     , m_captionActor(vtkSmartPointer<vtkCaptionActor2D>::New())
     , m_transform(vtkSmartPointer<vtkTransform>::New())
     , m_markerActor(vtkSmartPointer<MarkerPointActor>::New())
