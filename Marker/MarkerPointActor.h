@@ -9,10 +9,10 @@ class vtkCaptionActor2D;
 class vtkSphereSource;
 class vtkActor;
 class vtkPolyDataMapper;
-class vtkLinearTransform;
 class vtkCutter;
 class vtkPlane;
 class vtkSTLReader;
+class vtkTransformFilter;
 
 class MarkerPointActor : public vtkProp3D
 {
@@ -27,7 +27,9 @@ public:
     int RenderOverlay(vtkViewport *viewport) override;
     vtkTypeBool HasTranslucentPolygonalGeometry() override;
     void setOrigin(double x, double y, double z);
+    void setOrigin(double origin[3]);
     void setNormal(double x, double y, double z);
+    void setNormal(double normal[3]);
     void setText(const std::string& text);
     void setStlFileName(const std::string& fileName);
     void setTextVisible(const bool& visible);
@@ -38,6 +40,7 @@ private:
     void updateProps();
     void updateColor();
     bool isDataFromStl();
+    void updateOrigin();
 
     double m_bounds[6];
     double m_origin[3];

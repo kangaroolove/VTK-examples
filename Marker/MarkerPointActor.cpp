@@ -11,6 +11,8 @@
 #include <vtkTextProperty.h>
 #include <vtkTextActor.h>
 #include <vtkProperty2D.h>
+#include <vtkTransformFilter.h>
+#include <vtkTransform.h>
 
 vtkStandardNewMacro(MarkerPointActor)
 
@@ -94,11 +96,21 @@ void MarkerPointActor::setOrigin(double x, double y, double z)
     m_origin[2] = z;
 }
 
+void MarkerPointActor::setOrigin(double origin[3])
+{
+    setOrigin(origin[0], origin[1], origin[2]);
+}
+
 void MarkerPointActor::setNormal(double x, double y, double z)
 {
     m_normal[0] = x;
     m_normal[1] = y;
     m_normal[2] = z;
+}
+
+void MarkerPointActor::setNormal(double normal[3])
+{
+    setNormal(normal[0], normal[1], normal[2]);
 }
 
 void MarkerPointActor::setText(const std::string &text)
@@ -137,7 +149,10 @@ MarkerPointActor::MarkerPointActor() :
     m_normal{ 0, 0, 1 },
     m_color(1.0, 1.0, 1.0)
 {
-    m_text = "T1";
+    m_sphereSource->SetRadius(5);
+    m_sphereSource->SetCenter(0, 0, 0);
+    m_sphereSource->SetPhiResolution(100);
+    m_sphereSource->SetThetaResolution(100);
 
     m_captionActor->ThreeDimensionalLeaderOff();
     m_captionActor->LeaderOff();
@@ -150,6 +165,10 @@ MarkerPointActor::MarkerPointActor() :
     m_cutter->SetCutFunction(m_plane);
     m_actor->SetMapper(m_mapper);
 
+    m_actor->GetProperty()->SetLineWidth(1);
+    m_actor->GetProperty()->SetAmbient(1.0);
+    m_actor->GetProperty()->SetDiffuse(0.0);
+
     m_boundActor->SetMapper(m_boundMapper);
 
     this->updateProps();
@@ -161,23 +180,17 @@ MarkerPointActor::~MarkerPointActor()
 
 void MarkerPointActor::updateProps()
 {
-    m_plane->SetOrigin(m_origin);
+    updateOrigin();
     m_plane->SetNormal(m_normal);
 
     if (!isDataFromStl())
     {
-        m_sphereSource->SetRadius(5);
-        m_sphereSource->SetCenter(0, 0, 0);
-        m_sphereSource->SetPhiResolution(100);
-        m_sphereSource->SetThetaResolution(100);
-
         m_cutter->SetInputConnection(m_sphereSource->GetOutputPort());
         m_boundMapper->SetInputConnection(m_sphereSource->GetOutputPort());
     }
     else 
     {
         m_reader->SetFileName(m_stlFileName.c_str());
-        m_reader->Update();
 
         m_cutter->SetInputConnection(m_reader->GetOutputPort());
         m_boundMapper->SetInputConnection(m_reader->GetOutputPort());
@@ -217,6 +230,22 @@ void MarkerPointActor::updateColor()
 bool MarkerPointActor::isDataFromStl()
 {
     return !m_stlFileName.empty();
+}
+
+void MarkerPointActor::updateOrigin()
+{
+    vtkLinearTransform* transform = this->GetUserTransform();
+    if (this->GetUserTransform())
+    {
+        vtkNew<vtkTransform> copy; 
+        copy->DeepCopy(transform);
+        copy->Inverse();
+        double newOrigin[3];
+        copy->TransformPoint(m_origin, newOrigin);
+        m_plane->SetOrigin(newOrigin);
+    }
+    else
+        m_plane->SetOrigin(m_origin);
 }
 
 double *MarkerPointActor::GetBounds()
