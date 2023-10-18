@@ -55,13 +55,13 @@ public:
         else if (key == "Left")
         {
             transform->SetInput(userTransform);
-            transform->Translate(0, 0, 1);
+            transform->Translate(-1, 0, 0);
             mConeActor->SetUserTransform(transform);
         }
         else if (key == "Right")
         {
             transform->SetInput(userTransform);
-            transform->Translate(0, 0, -1);
+            transform->Translate(1, 0, 0);
             mConeActor->SetUserTransform(transform);
         }
         mRenderWindow->Render();
@@ -115,9 +115,6 @@ int main(int, char*[])
   style->SetConeActor(coneActor);
   style->SetRenderWindow(renderWindow);
   interactor->SetInteractorStyle(style);
-
-  renderer->GetActiveCamera()->Azimuth(90);
-  renderer->ResetCamera();
 
   interactor->Initialize();
   interactor->Start();
