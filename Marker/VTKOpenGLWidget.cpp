@@ -122,61 +122,11 @@ void VTKOpenGLWidget::initialize()
     auto it = m_renderWindow->GetInteractor();
     m_style->SetRenderWindow(m_renderWindow);
     it->SetInteractorStyle(m_style);
-
-
-    // QPushButton* btn = new QPushButton(this);
-    // connect(btn, &QPushButton::clicked, this, [this]{
-    //     m_markerAssembly->setText("CCCCC");
-    //     m_markerAssembly->setColor(1.0, 0, 0);
-    //     m_renderWindow->Render();
-    // });
 }
 
 void VTKOpenGLWidget::createTestData()
 {
-    // vtkNew<vtkCylinderSource> cylinder;
-    // cylinder->SetRadius(5);
-    // cylinder->SetHeight(20);
-    // cylinder->SetResolution(100);
-
-    // vtkNew<vtkTransform> cylinderTransform;
-    // cylinderTransform->RotateX(90);
-
-    // vtkNew<vtkTransformPolyDataFilter> cylinderTransformFilter;
-    // cylinderTransformFilter->SetInputConnection(cylinder->GetOutputPort());
-    // cylinderTransformFilter->SetTransform(cylinderTransform);
-
-    // vtkNew<vtkPolyDataMapper> cylinderMapper;
-    // cylinderMapper->SetInputConnection(cylinderTransformFilter->GetOutputPort());
-
-    // vtkNew<vtkActor> cylinderActor;
-    // cylinderActor->SetMapper(cylinderMapper);
-    // cylinderActor->SetUserTransform(m_transform);
-
-    // m_renderer->AddActor(cylinderActor);
-
-    // m_style->SetActor(cylinderActor);
-
-
-
-    // vtkNew<vtkTransform> textTransform;
-    // textTransform->SetInput(m_transform);
-    // textTransform->Translate(0, 10, 0);
-
-    // double point[3] = { 0 };
-    // double newPoint[3] = { 0 };
-    // textTransform->TransformPoint(point, newPoint);
-
-    // m_captionActor->SetCaption("T1");
-    // m_captionActor->ThreeDimensionalLeaderOff();
-    // m_captionActor->LeaderOff();
-    // m_captionActor->BorderOff();
-    // m_captionActor->SetPosition(0, 0);
-    // m_captionActor->SetAttachmentPoint(newPoint);
-    // //m_captionActor->GetCaptionTextProperty()->SetColor(1.0, 0, 0);
-
-    // m_renderer->AddActor(m_captionActor);
-
+    m_markerActor->setText("KangarooLove");
     m_renderer->AddActor(m_markerActor);
     m_style->setProp3D(m_markerActor);
 }
