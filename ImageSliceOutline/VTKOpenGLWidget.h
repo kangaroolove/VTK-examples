@@ -17,5 +17,6 @@ private:
     void createTestData();
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
-    vtkSmartPointer<vtkRenderer> m_renderer;
+    vtkSmartPointer<vtkRenderer> m_leftRenderer;
+    vtkSmartPointer<vtkRenderer> m_rightRenderer;
 };

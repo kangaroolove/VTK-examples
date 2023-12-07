@@ -16,6 +16,7 @@ find_package(VTK COMPONENTS
   vtkViewsQt
   vtkIOGeometry
   vtkInteractionStyle
+  vtkRenderingImage
 )
 
 include(${VTK_USE_FILE})
