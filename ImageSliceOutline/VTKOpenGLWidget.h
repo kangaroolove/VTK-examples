@@ -15,8 +15,11 @@ public:
 private:
     void initialize();
     void createTestData();
+    void createLeftRenderData();
+    void createRightRenderData();
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_leftRenderer;
     vtkSmartPointer<vtkRenderer> m_rightRenderer;
+    double m_origin[3];
 };
