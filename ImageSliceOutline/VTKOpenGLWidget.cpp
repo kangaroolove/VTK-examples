@@ -13,6 +13,7 @@
 #include <vtkImageProperty.h>
 #include <vtkPlane.h>
 #include <vtkTransformFilter.h>
+#include <vtkTransformPolyDataFilter.h>
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     : QVTKOpenGLNativeWidget(parent)
@@ -52,17 +53,14 @@ void VTKOpenGLWidget::createLeftRenderData()
     vtkNew<vtkNrrdReader> reader;
     reader->SetFileName("D:/MRI.nrrd");
 
-    for (int i = 0; i < 1; ++i)
+    for (int i = 0; i < 3; ++i)
     {
         vtkNew<vtkTransform> transform;
         if (i == 0)
         {
-            transform->RotateZ(10);
         }
         if (i == 1)
-        {
             transform->RotateY(90);
-        }
         else if (i == 2)
             transform->RotateX(90);
 
@@ -78,39 +76,42 @@ void VTKOpenGLWidget::createLeftRenderData()
         //imageReslice->SetResliceTransform(transform);
         imageReslice->SetOutputDimensionality(2);
 
-        // vtkNew<vtkTransformFilter> transformFilter;
-        // transformFilter->SetInputConnection(imageReslice->GetOutputPort());
-        // transformFilter->SetTransform(transform);
+        vtkNew<vtkTransformFilter> transformFilter;
+        transformFilter->SetInputConnection(imageReslice->GetOutputPort());
+        transformFilter->SetTransform(transform);
 
-        // vtkNew<vtkPolyDataMapper> mapper;
-        // mapper->SetInputConnection(transformFilter->GetOutputPort());
+        vtkNew<vtkPolyDataMapper> mapper;
+        mapper->SetInputConnection(transformFilter->GetOutputPort());
 
-        // vtkNew<vtkActor> actor;
-        // actor->SetMapper(mapper);
+        vtkNew<vtkActor> actor;
+        actor->SetMapper(mapper);
 
-        //this->m_leftRenderer->AddActor(actor);
+        this->m_leftRenderer->AddActor(actor);
 
-        vtkNew<vtkImageResliceMapper> vtkImageResliceMapper;
+        vtkNew<vtkImageSliceMapper> vtkImageResliceMapper;
+        //vtkNew<vtkImageResliceMapper> vtkImageResliceMapper;
         vtkImageResliceMapper->SetInputConnection(imageReslice->GetOutputPort());
 
-        vtkImageResliceMapper->GetOutputPort();
+        //vtkImageResliceMapper->GetOutputPort();
         //vtkMatrix4x4* newMatrix = vtkImageResliceMapper->GetDataToWorldMatrix();
 
         vtkNew<vtkImageSlice> imageSlice;
         imageSlice->SetMapper(vtkImageResliceMapper);
+        imageSlice->SetUserTransform(transform);
 
         this->m_leftRenderer->AddActor(imageSlice);
 
-            vtkNew<vtkOutlineFilter> outlineFilter;
-    outlineFilter->SetInputConnection(vtkImageResliceMapper->GetOutputPort());
+        vtkNew<vtkOutlineFilter> outlineFilter;
+        outlineFilter->SetInputConnection(imageReslice->GetOutputPort());
 
-    vtkNew<vtkPolyDataMapper> outlineFilterMapper;
-    outlineFilterMapper->SetInputConnection(outlineFilter->GetOutputPort());
+        vtkNew<vtkPolyDataMapper> outlineFilterMapper;
+        outlineFilterMapper->SetInputConnection(outlineFilter->GetOutputPort());
 
-    vtkNew<vtkActor> outlineFilterActor;
-    outlineFilterActor->SetMapper(outlineFilterMapper);
+        vtkNew<vtkActor> outlineFilterActor;
+        outlineFilterActor->SetMapper(outlineFilterMapper);
+        outlineFilterActor->SetUserTransform(transform);
 
-    this->m_leftRenderer->AddActor(outlineFilterActor);
+        this->m_leftRenderer->AddActor(outlineFilterActor);
     }
 
 #if 0
