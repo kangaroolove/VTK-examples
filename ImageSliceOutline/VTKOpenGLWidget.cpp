@@ -73,20 +73,21 @@ void VTKOpenGLWidget::createLeftRenderData()
         vtkNew<vtkImageReslice> imageReslice;
         imageReslice->SetInputConnection(reader->GetOutputPort());
         imageReslice->SetResliceAxes(matrix);
-        //imageReslice->SetResliceTransform(transform);
         imageReslice->SetOutputDimensionality(2);
+        //imageReslice->TransformInputSamplingOff();
+        imageReslice->SetResliceTransform(transform);
 
-        vtkNew<vtkTransformFilter> transformFilter;
-        transformFilter->SetInputConnection(imageReslice->GetOutputPort());
-        transformFilter->SetTransform(transform);
+        // vtkNew<vtkTransformFilter> transformFilter;
+        // transformFilter->SetInputConnection(imageReslice->GetOutputPort());
+        // transformFilter->SetTransform(transform);
 
-        vtkNew<vtkPolyDataMapper> mapper;
-        mapper->SetInputConnection(transformFilter->GetOutputPort());
+        // vtkNew<vtkPolyDataMapper> mapper;
+        // mapper->SetInputConnection(transformFilter->GetOutputPort());
 
-        vtkNew<vtkActor> actor;
-        actor->SetMapper(mapper);
+        // vtkNew<vtkActor> actor;
+        // actor->SetMapper(mapper);
 
-        this->m_leftRenderer->AddActor(actor);
+        //this->m_leftRenderer->AddActor(actor);
 
         vtkNew<vtkImageSliceMapper> vtkImageResliceMapper;
         //vtkNew<vtkImageResliceMapper> vtkImageResliceMapper;
@@ -97,7 +98,7 @@ void VTKOpenGLWidget::createLeftRenderData()
 
         vtkNew<vtkImageSlice> imageSlice;
         imageSlice->SetMapper(vtkImageResliceMapper);
-        imageSlice->SetUserTransform(transform);
+        //imageSlice->SetUserTransform(transform);
 
         this->m_leftRenderer->AddActor(imageSlice);
 
@@ -109,23 +110,10 @@ void VTKOpenGLWidget::createLeftRenderData()
 
         vtkNew<vtkActor> outlineFilterActor;
         outlineFilterActor->SetMapper(outlineFilterMapper);
-        outlineFilterActor->SetUserTransform(transform);
+        //outlineFilterActor->SetUserTransform(transform);
 
         this->m_leftRenderer->AddActor(outlineFilterActor);
     }
-
-#if 0
-    vtkNew<vtkOutlineFilter> outlineFilter;
-    outlineFilter->SetInputConnection(imageResliceMapper->GetOutputPort());
-
-    vtkNew<vtkPolyDataMapper> outlineFilterMapper;
-    outlineFilterMapper->SetInputConnection(outlineFilter->GetOutputPort());
-
-    vtkNew<vtkActor> outlineFilterActor;
-    outlineFilterActor->SetMapper(outlineFilterMapper);
-
-    this->m_rightRenderer->AddActor(outlineFilterActor);
-#endif
 }
 
 void VTKOpenGLWidget::createRightRenderData()
