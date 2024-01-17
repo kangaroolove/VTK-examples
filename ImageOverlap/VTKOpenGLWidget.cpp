@@ -11,6 +11,7 @@
 #include <vtkImageSlice.h>
 #include <vtkImageStack.h>
 #include <vtkPlane.h>
+#include <vtkDICOMImageReader.h>
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     : QVTKOpenGLNativeWidget(parent)
@@ -40,6 +41,29 @@ void VTKOpenGLWidget::createTestData()
         m_renderer->AddActor(stacks[i]);
     }
 
+    double origin[3] = { 10, 50, 0 };
+
+    vtkNew<vtkDICOMImageReader> dicomReader;
+    dicomReader->SetDirectoryName("D:/Real-Patient-Data/Patient A/t2");
+
+    for (int i = 0; i < 3; i++)
+    {
+        double normal[3] = { 0 };
+        normal[i] = 1;
+        vtkNew<vtkPlane> plane;
+        plane->SetOrigin(origin);
+        plane->SetNormal(normal);
+
+        vtkNew<vtkImageResliceMapper> mapper;
+        mapper->SetInputConnection(dicomReader->GetOutputPort());
+        mapper->SetSlicePlane(plane);
+
+        vtkNew<vtkImageSlice> slice;
+        slice->SetMapper(mapper);
+
+        stacks[i]->AddImage(slice);
+    }
+
     vtkNew<vtkNrrdReader> nrrdReader;
     nrrdReader->SetFileName("D:/MRI.nrrd");
 
@@ -48,7 +72,7 @@ void VTKOpenGLWidget::createTestData()
         double normal[3] = { 0 };
         normal[i] = 1;
         vtkNew<vtkPlane> plane;
-        plane->SetOrigin(50, 50, 50);
+        plane->SetOrigin(origin);
         plane->SetNormal(normal);
 
         vtkNew<vtkImageResliceMapper> mapper;
