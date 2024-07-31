@@ -2,6 +2,7 @@
 
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkSmartPointer.h>
+#include <array>
 
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
@@ -17,7 +18,5 @@ private:
     void createTestData();
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
-    vtkSmartPointer<vtkRenderer> m_leftRenderer;
-    vtkSmartPointer<vtkRenderer> m_middleRenderer;
-    vtkSmartPointer<vtkRenderer> m_rightRenderer;
+    std::array<vtkSmartPointer<vtkRenderer>, 3> m_renderers;
 };
