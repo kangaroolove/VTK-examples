@@ -9,6 +9,8 @@
 #include <vtkNrrdReader.h>
 #include <vtkImageActor.h>
 #include <vtkImageMapper3D.h>
+#include <vtkCornerAnnotation.h>
+#include <vtkCamera.h>
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     : QVTKOpenGLNativeWidget(parent)
@@ -16,6 +18,7 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
 {
     initialize();
     createTestData();
+    createAnnotation();
 }
 
 VTKOpenGLWidget::~VTKOpenGLWidget()
@@ -69,4 +72,39 @@ void VTKOpenGLWidget::createTestData()
 
     for (int i = 0; i < 3; i++)
         m_renderers[i]->AddViewProp(actors[i]);
+
+    m_renderers.at(2)->GetActiveCamera()->Roll(180);
+    m_renderers.at(2)->GetActiveCamera()->Azimuth(180);
+    m_renderers.at(2)->ResetCamera();
+
+    m_renderers.at(1)->GetActiveCamera()->Pitch(90);
+    m_renderers.at(1)->ResetCamera();
+
+    m_renderers.at(0)->GetActiveCamera()->Yaw(90);
+    m_renderers.at(0)->GetActiveCamera()->Roll(-90);
+    m_renderers.at(0)->ResetCamera();
+}
+
+void VTKOpenGLWidget::createAnnotation()
+{
+    vtkNew<vtkCornerAnnotation> rightAnnotation;
+    rightAnnotation->SetText(vtkCornerAnnotation::TextPosition::LeftEdge, "R");
+    rightAnnotation->SetText(vtkCornerAnnotation::TextPosition::RightEdge, "L");
+    rightAnnotation->SetText(vtkCornerAnnotation::TextPosition::UpperEdge, "A");
+    rightAnnotation->SetText(vtkCornerAnnotation::TextPosition::LowerEdge, "P");
+    m_renderers.at(2)->AddViewProp(rightAnnotation);
+
+    vtkNew<vtkCornerAnnotation> middleAnnotation;
+    middleAnnotation->SetText(vtkCornerAnnotation::TextPosition::LeftEdge, "R");
+    middleAnnotation->SetText(vtkCornerAnnotation::TextPosition::RightEdge, "L");
+    middleAnnotation->SetText(vtkCornerAnnotation::TextPosition::UpperEdge, "S");
+    middleAnnotation->SetText(vtkCornerAnnotation::TextPosition::LowerEdge, "I");
+    m_renderers.at(1)->AddViewProp(middleAnnotation);
+
+    vtkNew<vtkCornerAnnotation> leftAnnotation;
+    leftAnnotation->SetText(vtkCornerAnnotation::TextPosition::LeftEdge, "A");
+    leftAnnotation->SetText(vtkCornerAnnotation::TextPosition::RightEdge, "P");
+    leftAnnotation->SetText(vtkCornerAnnotation::TextPosition::UpperEdge, "S");
+    leftAnnotation->SetText(vtkCornerAnnotation::TextPosition::LowerEdge, "I");
+    m_renderers.at(0)->AddViewProp(leftAnnotation);
 }
