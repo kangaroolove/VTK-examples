@@ -16,11 +16,28 @@
 #include <vtkImageStencil.h>
 #include <vtkPointData.h>
 #include <vtkImageActor.h>
+#include <vtkInteractorStyleImage.h>
+#include <QDebug>
+
+class InteractorStyleImage : public vtkInteractorStyleImage
+{
+public:
+  static InteractorStyleImage* New();
+  vtkTypeMacro(InteractorStyleImage, vtkInteractorStyleImage);
+
+  void OnLeftButtonDown() override
+  {
+    qDebug()<<"OnLeftButtonDown";
+  }
+};
+vtkStandardNewMacro(InteractorStyleImage);
+
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     : QVTKOpenGLNativeWidget(parent)
     , m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New())
     , m_renderer(vtkSmartPointer<vtkRenderer>::New())
+    , m_interactorStyle(vtkSmartPointer<InteractorStyleImage>::New())
 {
     initialize();
     createTestData();
@@ -35,6 +52,7 @@ void VTKOpenGLWidget::initialize()
 {
     m_renderWindow->AddRenderer(m_renderer);
     SetRenderWindow(m_renderWindow);
+    m_renderWindow->GetInteractor()->SetInteractorStyle(m_interactorStyle);
 }
 
 void VTKOpenGLWidget::createTestData()
@@ -134,7 +152,7 @@ void VTKOpenGLWidget::createTestData()
   imgstenc->ReverseStencilOff();
   imgstenc->SetBackgroundValue(outval);
   imgstenc->Update();
-  imgstenc->GetOutput()->Print(std::cout);
+  //imgstenc->GetOutput()->Print(std::cout);
 
 
     vtkNew<vtkImageActor> actor;

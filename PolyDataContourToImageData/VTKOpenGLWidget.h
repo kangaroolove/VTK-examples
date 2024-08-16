@@ -5,6 +5,7 @@
 
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
+class InteractorStyleImage;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget
 {
@@ -18,4 +19,5 @@ private:
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
+    vtkSmartPointer<InteractorStyleImage> m_interactorStyle;
 };
