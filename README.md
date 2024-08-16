@@ -6,6 +6,9 @@
 ![image](https://github.com/kangaroolove/VTK-example/assets/16329871/1c8fef9c-726f-47e8-b9f7-3710be1466b3)
 ### Marker
 ![image](https://github.com/kangaroolove/VTK-example/assets/16329871/5e7df04e-4579-439e-9c5f-bfc6ed86b654)
+### DisplayOrthogonalSlice
+![image](https://github.com/user-attachments/assets/b6ed4035-da60-4fd0-8f29-6d7c822de15e)
+
 
 
 
