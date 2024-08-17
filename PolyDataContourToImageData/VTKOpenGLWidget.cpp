@@ -29,6 +29,25 @@ public:
   {
     qDebug()<<"OnLeftButtonDown";
   }
+
+  void OnMouseMove() override
+  {
+    int eventPosition[2] = { 0 };
+    this->GetInteractor()->GetEventPosition(eventPosition);
+
+    double distance = ((m_lastEventPosition[0] - eventPosition[0]) * (m_lastEventPosition[0] - eventPosition[0])) + ((m_lastEventPosition[1] - eventPosition[1]) * (m_lastEventPosition[1] - eventPosition[1]));
+    qDebug()<<"distance = "<<distance;
+    if (distance > 0.0)
+    {
+      qDebug()<<"MouseMove";
+    }
+
+    m_lastEventPosition[0] = eventPosition[0];
+    m_lastEventPosition[1] = eventPosition[1];
+  }
+
+private:
+  int m_lastEventPosition[2] = { 0 };
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
@@ -61,7 +80,7 @@ void VTKOpenGLWidget::createTestData()
   vtkNew<vtkSphereSource> sphereSource;
   sphereSource->SetPhiResolution(30);
   sphereSource->SetThetaResolution(30);
-  sphereSource->SetCenter(40, 40, 0);
+  sphereSource->SetCenter(0, 0, 0);
   sphereSource->SetRadius(20);
 
   // generate circle by cutting the sphere with an implicit plane
@@ -79,14 +98,6 @@ void VTKOpenGLWidget::createTestData()
 
   // that's our circle
   auto circle = stripper->GetOutput();
-
-  // write circle out
-//   vtkNew<vtkXMLPolyDataWriter> polyDataWriter;
-//   polyDataWriter->SetInputData(circle);
-//   polyDataWriter->SetFileName("circle.vtp");
-//   polyDataWriter->SetCompressorTypeToNone();
-//   polyDataWriter->SetDataModeToAscii();
-//   polyDataWriter->Write();
 
   // prepare the binary image's voxel grid
   vtkNew<vtkImageData> whiteImage;
@@ -159,10 +170,4 @@ void VTKOpenGLWidget::createTestData()
     actor->SetInputData(imgstenc->GetOutput());
 
     m_renderer->AddViewProp(actor);
-
-
-//   vtkNew<vtkMetaImageWriter> imageWriter;
-//   imageWriter->SetFileName("labelImage.mhd");
-//   imageWriter->SetInputConnection(imgstenc->GetOutputPort());
-//   imageWriter->Write();
 }
