@@ -18,6 +18,7 @@
 #include <vtkImageActor.h>
 #include <vtkInteractorStyleImage.h>
 #include <QDebug>
+#include <vtkCoordinate.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -50,16 +51,38 @@ public:
     qDebug()<<"distance = "<<distance;
     if (distance > 0.0)
     {
-      qDebug()<<"MouseMove";
+      double* worldPosition = nullptr;
+      vtkNew<vtkCoordinate> coordinate;
+      coordinate->SetCoordinateSystemToDisplay();
+      coordinate->SetValue(eventPosition[0], eventPosition[1], 0);
+      worldPosition = coordinate->GetComputedWorldValue(m_renderer);
+      for (int i  = 0; i < 3; i++)
+      {
+        qDebug()<<"x = "<<worldPosition[0];
+        qDebug()<<"y = "<<worldPosition[1];
+        qDebug()<<"z = "<<worldPosition[2];
+      }
     }
 
     m_lastEventPosition[0] = eventPosition[0];
     m_lastEventPosition[1] = eventPosition[1];
   }
 
+  void setContouringImage(vtkImageData* image)
+  {
+    m_contouringImage = image;
+  }
+
+  void setRenderer(vtkRenderer* renderer)
+  {
+    m_renderer = renderer;
+  }
+
 private:
   int m_lastEventPosition[2] = { 0 };
   bool m_leftButtonPress = false;
+  vtkImageData* m_contouringImage = nullptr;
+  vtkRenderer* m_renderer = nullptr;
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
@@ -83,6 +106,7 @@ void VTKOpenGLWidget::initialize()
 {
     m_renderWindow->AddRenderer(m_renderer);
     SetRenderWindow(m_renderWindow);
+    m_interactorStyle->setRenderer(m_renderer);
     m_renderWindow->GetInteractor()->SetInteractorStyle(m_interactorStyle);
 }
 
