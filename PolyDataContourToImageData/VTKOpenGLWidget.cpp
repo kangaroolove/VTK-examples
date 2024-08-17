@@ -27,13 +27,24 @@ public:
 
   void OnLeftButtonDown() override
   {
-    qDebug()<<"OnLeftButtonDown";
+    vtkInteractorStyleImage::OnLeftButtonDown();
+    m_leftButtonPress = true;
   }
+
+  void OnLeftButtonUp() override
+  {
+    vtkInteractorStyleImage::OnLeftButtonUp();
+    m_leftButtonPress = false;
+  } 
 
   void OnMouseMove() override
   {
+    vtkInteractorStyleImage::OnMouseMove();
     int eventPosition[2] = { 0 };
     this->GetInteractor()->GetEventPosition(eventPosition);
+
+    if (!m_leftButtonPress)
+      return;
 
     double distance = ((m_lastEventPosition[0] - eventPosition[0]) * (m_lastEventPosition[0] - eventPosition[0])) + ((m_lastEventPosition[1] - eventPosition[1]) * (m_lastEventPosition[1] - eventPosition[1]));
     qDebug()<<"distance = "<<distance;
@@ -48,6 +59,7 @@ public:
 
 private:
   int m_lastEventPosition[2] = { 0 };
+  bool m_leftButtonPress = false;
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
