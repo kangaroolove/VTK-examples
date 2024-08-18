@@ -23,6 +23,9 @@
 #include <vtkActor.h>
 #include <vtkNamedColors.h>
 #include <vtkProperty.h>
+#include <vtkTransform.h>
+#include <vtkTransformFilter.h>
+#include <vtkTransformPolyDataFilter.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -74,39 +77,39 @@ public:
 
   // generate circle by cutting the sphere with an implicit plane
   // (through its center, axis-aligned)
-
   vtkNew<vtkCutter> circleCutter;
   vtkNew<vtkPlane> cutPlane;
   cutPlane->SetOrigin(0, 0, 0);
   cutPlane->SetNormal(0, 0, 1);
   circleCutter->SetCutFunction(cutPlane);
   circleCutter->SetInputConnection(sphereSource->GetOutputPort());
-  //circleCutter->SetInputData(sphereSource->GetOutput());
 
-  //circleCutter->Update();
+  vtkNew<vtkTransform> transform;
+  transform->Translate(worldPosition);
+
+  vtkNew<vtkTransformFilter> transformFilter;
+  transformFilter->SetInputConnection(circleCutter->GetOutputPort());
+  transformFilter->SetTransform(transform);
+
+  vtkNew<vtkStripper> stripper;
+  stripper->SetInputConnection(transformFilter->GetOutputPort()); // valid circle
+  //stripper->SetInputData(circleCutter->GetOutput());
+  stripper->Update();
 
   vtkNew<vtkPolyDataMapper> cutterMapper;
-  cutterMapper->SetInputConnection(circleCutter->GetOutputPort());
-  cutterMapper->SetResolveCoincidentTopologyToPolygonOffset();  
+  cutterMapper->SetInputConnection(stripper->GetOutputPort());
+  //cutterMapper->SetResolveCoincidentTopologyToPolygonOffset();  
 
   vtkNew<vtkNamedColors> colors;
   vtkNew<vtkActor> cutterActor;
   cutterActor->GetProperty()->SetColor(colors->GetColor3d("red").GetData());
   cutterActor->SetMapper(cutterMapper);
-  cutterActor->SetPosition(worldPosition);
-
   m_renderer->AddActor(cutterActor);
-
-
-#if 0
-
-  vtkNew<vtkStripper> stripper;
-  stripper->SetInputConnection(circleCutter->GetOutputPort()); // valid circle
-  //stripper->SetInputData(circleCutter->GetOutput());
-  stripper->Update();
 
   // that's our circle
   auto circle = stripper->GetOutput();
+
+  #if 0
 
   // sweep polygonal data (this is the important thing with contours!)
   vtkNew<vtkLinearExtrusionFilter> extruder;
@@ -120,11 +123,19 @@ public:
   double spacing[3] = { 0.5 };
   int extent[6] = { 0, 99, 0, 99, 0, 99};
 
+
+  vtkNew<vtkTransform> transform;
+  transform->Translate(worldPosition);
+
+  vtkNew<vtkTransformFilter> transformFilter;
+  transformFilter->SetInputConnection(extruder->GetOutputPort());
+  transformFilter->SetTransform(transform);
+
   // polygonal data --> image stencil:
   vtkNew<vtkPolyDataToImageStencil> pol2stenc;
   pol2stenc->SetTolerance(0); // important if extruder->SetVector(0, 0, 1) !!!
-  // pol2stenc->SetInputConnection(extruder->GetOutputPort());
-  pol2stenc->SetInputData(extruder->GetOutput());
+  pol2stenc->SetInputConnection(transformFilter->GetOutputPort());
+  //pol2stenc->SetInputData(extruder->GetOutput());
   pol2stenc->SetOutputOrigin(origin);
   pol2stenc->SetOutputSpacing(spacing);
   pol2stenc->SetOutputWholeExtent(extent);
@@ -136,10 +147,10 @@ public:
 
     vtkNew<vtkImageStencil> imgstenc;
     imgstenc->SetInputData(image);
-    //imgstenc->SetStencilConnection(pol2stenc->GetOutputPort());
-    imgstenc->SetStencilData(pol2stenc->GetOutput());
+    imgstenc->SetStencilConnection(pol2stenc->GetOutputPort());
+    //imgstenc->SetStencilData(pol2stenc->GetOutput());
     imgstenc->ReverseStencilOff();
-    imgstenc->SetBackgroundValue(0);
+    imgstenc->SetBackgroundValue(255.0);
     imgstenc->Update();
 
       m_imageActor->SetInputData(imgstenc->GetOutput());
@@ -223,7 +234,7 @@ void VTKOpenGLWidget::createTestData()
   whiteImage->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
 
   // fill the image with foreground voxels:
-  unsigned char inval = 0;
+  unsigned char inval = 255;
   unsigned char outval = 0;
   vtkIdType count = whiteImage->GetNumberOfPoints();
   for (vtkIdType i = 0; i < count; ++i)
