@@ -73,10 +73,11 @@ public:
   sphereSource->SetPhiResolution(30);
   sphereSource->SetThetaResolution(30);
   sphereSource->SetCenter(0, 0, 0);
-  sphereSource->SetRadius(2);
+  sphereSource->SetRadius(20);
 
   // generate circle by cutting the sphere with an implicit plane
   // (through its center, axis-aligned)
+
   vtkNew<vtkCutter> circleCutter;
   vtkNew<vtkPlane> cutPlane;
   cutPlane->SetOrigin(0, 0, 0);
@@ -84,45 +85,21 @@ public:
   circleCutter->SetCutFunction(cutPlane);
   circleCutter->SetInputConnection(sphereSource->GetOutputPort());
 
-  vtkNew<vtkTransform> transform;
-  transform->Translate(worldPosition);
-
-  vtkNew<vtkTransformFilter> transformFilter;
-  transformFilter->SetInputConnection(circleCutter->GetOutputPort());
-  transformFilter->SetTransform(transform);
-
   vtkNew<vtkStripper> stripper;
-  stripper->SetInputConnection(transformFilter->GetOutputPort()); // valid circle
-  //stripper->SetInputData(circleCutter->GetOutput());
+  stripper->SetInputConnection(circleCutter->GetOutputPort()); // valid circle
   stripper->Update();
-
-  vtkNew<vtkPolyDataMapper> cutterMapper;
-  cutterMapper->SetInputConnection(stripper->GetOutputPort());
-  //cutterMapper->SetResolveCoincidentTopologyToPolygonOffset();  
-
-  vtkNew<vtkNamedColors> colors;
-  vtkNew<vtkActor> cutterActor;
-  cutterActor->GetProperty()->SetColor(colors->GetColor3d("red").GetData());
-  cutterActor->SetMapper(cutterMapper);
-  m_renderer->AddActor(cutterActor);
 
   // that's our circle
   auto circle = stripper->GetOutput();
 
-  #if 0
-
   // sweep polygonal data (this is the important thing with contours!)
   vtkNew<vtkLinearExtrusionFilter> extruder;
+  //extruder->SetInputConnection(stripper->GetOutputPort());
   extruder->SetInputData(circle);
   extruder->SetScaleFactor(1.);
   extruder->SetExtrusionTypeToVectorExtrusion();
   extruder->SetVector(0, 0, 1);
   extruder->Update();
-
-  double origin[3] = { 0 };
-  double spacing[3] = { 0.5 };
-  int extent[6] = { 0, 99, 0, 99, 0, 99};
-
 
   vtkNew<vtkTransform> transform;
   transform->Translate(worldPosition);
@@ -130,6 +107,23 @@ public:
   vtkNew<vtkTransformFilter> transformFilter;
   transformFilter->SetInputConnection(extruder->GetOutputPort());
   transformFilter->SetTransform(transform);
+
+
+  // vtkNew<vtkPolyDataMapper> cutterMapper;
+  // cutterMapper->SetInputConnection(transformFilter->GetOutputPort());
+  // //cutterMapper->SetResolveCoincidentTopologyToPolygonOffset();  
+
+  // vtkNew<vtkNamedColors> colors;
+  // vtkNew<vtkActor> cutterActor;
+  // cutterActor->GetProperty()->SetColor(colors->GetColor3d("red").GetData());
+  // cutterActor->SetMapper(cutterMapper);
+  // m_renderer->AddActor(cutterActor);
+
+    #if 1
+
+  double origin[3] = { 0 };
+  double spacing[3] = { 0.5 };
+  int extent[6] = { 0, 99, 0, 99, 0, 99};
 
   // polygonal data --> image stencil:
   vtkNew<vtkPolyDataToImageStencil> pol2stenc;
