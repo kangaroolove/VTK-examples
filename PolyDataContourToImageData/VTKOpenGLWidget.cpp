@@ -55,9 +55,19 @@ public:
       return;
 
     double distance = ((m_lastEventPosition[0] - eventPosition[0]) * (m_lastEventPosition[0] - eventPosition[0])) + ((m_lastEventPosition[1] - eventPosition[1]) * (m_lastEventPosition[1] - eventPosition[1]));
-    qDebug()<<"distance = "<<distance;
+    // qDebug()<<"distance = "<<distance;
     if (distance > 0.0)
     {
+
+    // static bool once = false;
+
+    // if (once == false)
+    // {
+    //     once = true;
+    // }
+    // else 
+    //   return;
+
       double* worldPosition = nullptr;
       vtkNew<vtkCoordinate> coordinate;
       coordinate->SetCoordinateSystemToDisplay();
@@ -73,7 +83,7 @@ public:
   sphereSource->SetPhiResolution(30);
   sphereSource->SetThetaResolution(30);
   sphereSource->SetCenter(0, 0, 0);
-  sphereSource->SetRadius(20);
+  sphereSource->SetRadius(2);
 
   // generate circle by cutting the sphere with an implicit plane
   // (through its center, axis-aligned)
@@ -102,7 +112,7 @@ public:
   extruder->Update();
 
   vtkNew<vtkTransform> transform;
-  transform->Translate(worldPosition);
+  transform->Translate(worldPosition[0], worldPosition[1], 0);
 
   vtkNew<vtkTransformFilter> transformFilter;
   transformFilter->SetInputConnection(extruder->GetOutputPort());
@@ -122,7 +132,7 @@ public:
     #if 1
 
   double origin[3] = { 0 };
-  double spacing[3] = { 0.5 };
+  double spacing[3] = { 0.5, 0.5, 0.5 };
   int extent[6] = { 0, 99, 0, 99, 0, 99};
 
   // polygonal data --> image stencil:
@@ -137,14 +147,29 @@ public:
 
   // cut the corresponding white image and set the background:
 
-    vtkImageData* image = m_imageActor->GetInput();
+    // vtkImageData* image = m_imageActor->GetInput();
+
+      vtkNew<vtkImageData> whiteImage;
+
+  whiteImage->SetSpacing(spacing);
+  whiteImage->SetExtent(0, 99, 0, 99, 0, 99);
+  whiteImage->SetOrigin(origin);
+  whiteImage->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
+
+  // fill the image with foreground voxels:
+  unsigned char inval = 255;
+  unsigned char outval = 0;
+  vtkIdType count = whiteImage->GetNumberOfPoints();
+  for (vtkIdType i = 0; i < count; ++i)
+  {
+    whiteImage->GetPointData()->GetScalars()->SetTuple1(i, inval);
+  }
 
     vtkNew<vtkImageStencil> imgstenc;
-    imgstenc->SetInputData(image);
+    imgstenc->SetInputData(whiteImage);
     imgstenc->SetStencilConnection(pol2stenc->GetOutputPort());
-    //imgstenc->SetStencilData(pol2stenc->GetOutput());
     imgstenc->ReverseStencilOff();
-    imgstenc->SetBackgroundValue(255.0);
+    imgstenc->SetBackgroundValue(0);
     imgstenc->Update();
 
       m_imageActor->SetInputData(imgstenc->GetOutput());
@@ -177,6 +202,11 @@ public:
     m_imageActor = vtkImageActor;
   }
 
+  void setWriteImage(vtkImageData* image)
+  {
+    m_writeImage = image;
+  }
+
 private:
   int m_lastEventPosition[2] = { 0 };
   bool m_leftButtonPress = false;
@@ -184,6 +214,7 @@ private:
   vtkRenderer* m_renderer = nullptr;
   vtkRenderWindow* m_renderWindow;
   vtkImageActor* m_imageActor;
+  vtkImageData* m_writeImage;
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
@@ -236,10 +267,13 @@ void VTKOpenGLWidget::createTestData()
     whiteImage->GetPointData()->GetScalars()->SetTuple1(i, inval);
   }
 
+  vtkNew<vtkImageData> whiteImage2;
+  whiteImage2->DeepCopy(whiteImage);
     vtkNew<vtkImageActor> actor;
-    actor->SetInputData(whiteImage);
+    actor->SetInputData(whiteImage2);
 
-      m_interactorStyle->setImageActor(actor);
+    m_interactorStyle->setWriteImage(whiteImage);
+    m_interactorStyle->setImageActor(actor);
 
     m_renderer->AddViewProp(actor);
 }
