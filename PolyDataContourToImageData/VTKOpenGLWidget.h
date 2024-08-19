@@ -9,6 +9,7 @@ class InteractorStyleImage;
 class vtkPoints;
 class vtkCellArray;
 class vtkPolyData;
+class vtkImageData;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget
 {
@@ -19,6 +20,7 @@ public:
 private:
     void initialize();
     void createTestData();
+    void initColor(vtkImageData* image, const int& color);
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;

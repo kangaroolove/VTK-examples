@@ -30,6 +30,7 @@
 #include <vtkCellArray.h>
 #include <vtkPolyData.h>
 #include <vtkCamera.h>
+#include <vtkAppendPolyData.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -117,50 +118,85 @@ public:
       m_lineCells->Modified();
 
       this->m_linePoints->GetData()->Modified();
-      this->m_lineData->SetPoints(this->m_linePoints);
-      this->m_lineData->SetLines(this->m_lineCells);
-      this->m_lineData->Modified();
 
-#if 0
+
+      vtkNew<vtkSphereSource> sphereSource;
+      sphereSource->SetPhiResolution(30);
+      sphereSource->SetThetaResolution(30);
+      sphereSource->SetCenter(0, 0, 0);
+      sphereSource->SetRadius(2);
+      sphereSource->Update();
+
+      vtkNew<vtkCutter> circleCutter;
+      vtkNew<vtkPlane> cutPlane;
+      cutPlane->SetOrigin(0, 0, 0);
+      cutPlane->SetNormal(0, 0, 1);
+      circleCutter->SetCutFunction(cutPlane);
+      circleCutter->SetInputConnection(sphereSource->GetOutputPort());
+
+      vtkNew<vtkTransformPolyDataFilter> filter; 
+
+      vtkNew<vtkAppendPolyData> appendPolyData;
+      for (vtkIdType i = 0; i < m_linePoints->GetNumberOfPoints(); i++)
+      {
+        vtkNew<vtkTransform> transform;
+        double* position = m_linePoints->GetPoint(i);
+        transform->Translate(position[0], position[1], 0);
+        vtkNew<vtkTransformPolyDataFilter> filter;
+        filter->SetInputConnection(circleCutter->GetOutputPort());
+        filter->SetTransform(transform);
+        filter->Update();
+
+        appendPolyData->AddInputConnection(filter->GetOutputPort());
+      }
+
+      appendPolyData->Update();
+
+
+      // this->m_lineData->SetPoints(this->m_linePoints);
+      // this->m_lineData->SetLines(this->m_lineCells);
+      // this->m_lineData->Modified();
+
+
   // 3D source sphere
-  vtkNew<vtkSphereSource> sphereSource;
-  sphereSource->SetPhiResolution(30);
-  sphereSource->SetThetaResolution(30);
-  sphereSource->SetCenter(0, 0, 0);
-  sphereSource->SetRadius(2);
+  // vtkNew<vtkSphereSource> sphereSource;
+  // sphereSource->SetPhiResolution(30);
+  // sphereSource->SetThetaResolution(30);
+  // sphereSource->SetCenter(0, 0, 0);
+  // sphereSource->SetRadius(2);
 
-  // generate circle by cutting the sphere with an implicit plane
-  // (through its center, axis-aligned)
+  // // generate circle by cutting the sphere with an implicit plane
+  // // (through its center, axis-aligned)
 
-  vtkNew<vtkCutter> circleCutter;
-  vtkNew<vtkPlane> cutPlane;
-  cutPlane->SetOrigin(0, 0, 0);
-  cutPlane->SetNormal(0, 0, 1);
-  circleCutter->SetCutFunction(cutPlane);
-  circleCutter->SetInputConnection(sphereSource->GetOutputPort());
+  // vtkNew<vtkCutter> circleCutter;
+  // vtkNew<vtkPlane> cutPlane;
+  // cutPlane->SetOrigin(0, 0, 0);
+  // cutPlane->SetNormal(0, 0, 1);
+  // circleCutter->SetCutFunction(cutPlane);
+  // circleCutter->SetInputConnection(sphereSource->GetOutputPort());
 
-  vtkNew<vtkStripper> stripper;
-  stripper->SetInputConnection(circleCutter->GetOutputPort()); // valid circle
-  stripper->Update();
+  // vtkNew<vtkStripper> stripper;
+  // stripper->SetInputConnection(circleCutter->GetOutputPort()); // valid circle
+  // stripper->Update();
 
-  // that's our circle
-  auto circle = stripper->GetOutput();
+  // // that's our circle
+  // auto circle = stripper->GetOutput();
 
-  // sweep polygonal data (this is the important thing with contours!)
-  vtkNew<vtkLinearExtrusionFilter> extruder;
-  //extruder->SetInputConnection(stripper->GetOutputPort());
-  extruder->SetInputData(circle);
-  extruder->SetScaleFactor(1.);
-  extruder->SetExtrusionTypeToVectorExtrusion();
-  extruder->SetVector(0, 0, 1);
-  extruder->Update();
+  // // sweep polygonal data (this is the important thing with contours!)
+  // vtkNew<vtkLinearExtrusionFilter> extruder;
+  // //extruder->SetInputConnection(stripper->GetOutputPort());
+  // extruder->SetInputData(circle);
+  // extruder->SetScaleFactor(1.);
+  // extruder->SetExtrusionTypeToVectorExtrusion();
+  // extruder->SetVector(0, 0, 1);
+  // extruder->Update();
 
-  vtkNew<vtkTransform> transform;
-  transform->Translate(worldPosition[0], worldPosition[1], 0);
+  // vtkNew<vtkTransform> transform;
+  // transform->Translate(worldPosition[0], worldPosition[1], 0);
 
-  vtkNew<vtkTransformFilter> transformFilter;
-  transformFilter->SetInputConnection(extruder->GetOutputPort());
-  transformFilter->SetTransform(transform);
+  // vtkNew<vtkTransformFilter> transformFilter;
+  // transformFilter->SetInputConnection(extruder->GetOutputPort());
+  // transformFilter->SetTransform(transform);
 
 
   // vtkNew<vtkPolyDataMapper> cutterMapper;
@@ -183,7 +219,7 @@ public:
   vtkNew<vtkPolyDataToImageStencil> pol2stenc;
   pol2stenc->SetTolerance(0); // important if extruder->SetVector(0, 0, 1) !!!
   //pol2stenc->SetInputConnection(transformFilter->GetOutputPort());
-  pol2stenc->SetInputData(m_lineData);
+  pol2stenc->SetInputData(appendPolyData->GetOutput());
   pol2stenc->SetOutputOrigin(origin);
   pol2stenc->SetOutputSpacing(spacing);
   pol2stenc->SetOutputWholeExtent(extent);
@@ -218,9 +254,6 @@ public:
 
       m_imageActor->SetInputData(imgstenc->GetOutput());
       #endif
-      #endif
-
-
 
       m_renderWindow->Render();
     }
@@ -249,9 +282,9 @@ public:
     m_imageActor = vtkImageActor;
   }
 
-  void setWriteImage(vtkImageData* image)
+  void setBaseImage(vtkImageData* image)
   {
-    m_writeImage = image;
+    m_baseImage = image;
   }
 
   void setLinePoints(vtkPoints* linePoints)
@@ -282,7 +315,7 @@ private:
   vtkRenderer* m_renderer = nullptr;
   vtkRenderWindow* m_renderWindow;
   vtkImageActor* m_imageActor;
-  vtkImageData* m_writeImage;
+  vtkImageData* m_baseImage;
   vtkPoints* m_linePoints;
   vtkCellArray* m_lineCells;
   vtkPolyData* m_lineData;
@@ -336,20 +369,17 @@ void VTKOpenGLWidget::createTestData()
   whiteImage->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
 
   // fill the image with foreground voxels:
-  unsigned char inval = 255;
-  unsigned char outval = 0;
-  vtkIdType count = whiteImage->GetNumberOfPoints();
-  for (vtkIdType i = 0; i < count; ++i)
-  {
-    whiteImage->GetPointData()->GetScalars()->SetTuple1(i, inval);
-  }
+  initColor(whiteImage, 255);
 
-  vtkNew<vtkImageData> whiteImage2;
-  whiteImage2->DeepCopy(whiteImage);
+
+  vtkNew<vtkImageData> grayImage;
+  grayImage->DeepCopy(whiteImage);
+  initColor(grayImage, 150);
+
     vtkNew<vtkImageActor> actor;
-    actor->SetInputData(whiteImage2);
+    actor->SetInputData(grayImage);
 
-    m_interactorStyle->setWriteImage(whiteImage);
+    m_interactorStyle->setBaseImage(grayImage);
     m_interactorStyle->setImageActor(actor);
     m_interactorStyle->setLinePoints(m_linePoints);
     m_interactorStyle->setLineCells(m_lineCells);
@@ -371,4 +401,13 @@ void VTKOpenGLWidget::createTestData()
     //m_renderer->ResetCamera();
 
     m_renderer->AddViewProp(actor);
+}
+
+void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color)
+{
+    vtkIdType count = image->GetNumberOfPoints();
+    for (vtkIdType i = 0; i < count; ++i)
+    {
+      image->GetPointData()->GetScalars()->SetTuple1(i, color);
+    }
 }
