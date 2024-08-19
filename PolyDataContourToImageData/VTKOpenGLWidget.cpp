@@ -26,6 +26,10 @@
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
 #include <vtkTransformPolyDataFilter.h>
+#include <vtkPoints.h>
+#include <vtkCellArray.h>
+#include <vtkPolyData.h>
+#include <vtkCamera.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -37,6 +41,27 @@ public:
   {
     vtkInteractorStyleImage::OnLeftButtonDown();
     m_leftButtonPress = true;
+
+        int eventPosition[2] = { 0 };
+    this->GetInteractor()->GetEventPosition(eventPosition);
+
+      double* worldPosition = nullptr;
+      vtkNew<vtkCoordinate> coordinate;
+      coordinate->SetCoordinateSystemToDisplay();
+      coordinate->SetValue(eventPosition[0], eventPosition[1], 0);
+      worldPosition = coordinate->GetComputedWorldValue(m_renderer);
+        qDebug()<<"x = "<<worldPosition[0];
+        qDebug()<<"y = "<<worldPosition[1];
+        qDebug()<<"z = "<<worldPosition[2];
+
+
+      double newPosition[3] = {
+        worldPosition[0],
+        worldPosition[1],
+        0
+      };
+
+    resetLine(newPosition);
   }
 
   void OnLeftButtonUp() override
@@ -47,7 +72,7 @@ public:
 
   void OnMouseMove() override
   {
-    //vtkInteractorStyleImage::OnMouseMove();
+    vtkInteractorStyleImage::OnMouseMove();
     int eventPosition[2] = { 0 };
     this->GetInteractor()->GetEventPosition(eventPosition);
 
@@ -78,6 +103,25 @@ public:
         qDebug()<<"z = "<<worldPosition[2];
 
 
+      double newPosition[3] = {
+        worldPosition[0],
+        worldPosition[1],
+        0
+      };
+
+      currentPoints[0] = m_pickCount++;
+      currentPoints[1] = m_pickCount;
+
+      m_linePoints->InsertPoint(m_pickCount, newPosition);
+      m_lineCells->InsertNextCell(2, currentPoints);
+      m_lineCells->Modified();
+
+      this->m_linePoints->GetData()->Modified();
+      this->m_lineData->SetPoints(this->m_linePoints);
+      this->m_lineData->SetLines(this->m_lineCells);
+      this->m_lineData->Modified();
+
+#if 0
   // 3D source sphere
   vtkNew<vtkSphereSource> sphereSource;
   sphereSource->SetPhiResolution(30);
@@ -138,8 +182,8 @@ public:
   // polygonal data --> image stencil:
   vtkNew<vtkPolyDataToImageStencil> pol2stenc;
   pol2stenc->SetTolerance(0); // important if extruder->SetVector(0, 0, 1) !!!
-  pol2stenc->SetInputConnection(transformFilter->GetOutputPort());
-  //pol2stenc->SetInputData(extruder->GetOutput());
+  //pol2stenc->SetInputConnection(transformFilter->GetOutputPort());
+  pol2stenc->SetInputData(m_lineData);
   pol2stenc->SetOutputOrigin(origin);
   pol2stenc->SetOutputSpacing(spacing);
   pol2stenc->SetOutputWholeExtent(extent);
@@ -174,6 +218,9 @@ public:
 
       m_imageActor->SetInputData(imgstenc->GetOutput());
       #endif
+      #endif
+
+
 
       m_renderWindow->Render();
     }
@@ -207,6 +254,27 @@ public:
     m_writeImage = image;
   }
 
+  void setLinePoints(vtkPoints* linePoints)
+  {
+    m_linePoints = linePoints;
+  }
+
+  void setLineCells(vtkCellArray* lineCells)
+  {
+    m_lineCells = lineCells;
+  }
+
+  void setLineData(vtkPolyData* lineData)
+  {
+    m_lineData = lineData;
+  }
+
+  void resetLine(double* pos)
+  {
+    this->m_pickCount = 0;
+    this->m_linePoints->InsertPoint(m_pickCount, pos);
+  }
+
 private:
   int m_lastEventPosition[2] = { 0 };
   bool m_leftButtonPress = false;
@@ -215,6 +283,12 @@ private:
   vtkRenderWindow* m_renderWindow;
   vtkImageActor* m_imageActor;
   vtkImageData* m_writeImage;
+  vtkPoints* m_linePoints;
+  vtkCellArray* m_lineCells;
+  vtkPolyData* m_lineData;
+  int m_pickCount = 0;
+
+  vtkIdType currentPoints[2];
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
@@ -224,6 +298,9 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     , m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New())
     , m_renderer(vtkSmartPointer<vtkRenderer>::New())
     , m_interactorStyle(vtkSmartPointer<InteractorStyleImage>::New())
+    , m_linePoints(vtkSmartPointer<vtkPoints>::New())
+    , m_lineCells(vtkSmartPointer<vtkCellArray>::New())
+    , m_lineData(vtkSmartPointer<vtkPolyData>::New())
 {
     initialize();
     createTestData();
@@ -274,6 +351,24 @@ void VTKOpenGLWidget::createTestData()
 
     m_interactorStyle->setWriteImage(whiteImage);
     m_interactorStyle->setImageActor(actor);
+    m_interactorStyle->setLinePoints(m_linePoints);
+    m_interactorStyle->setLineCells(m_lineCells);
+    m_interactorStyle->setLineData(m_lineData);
+
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputData(m_lineData);
+
+    vtkNew<vtkActor> lineActor;
+    lineActor->SetMapper(mapper);
+    lineActor->GetProperty()->SetColor(0, 0, 0);
+    lineActor->GetProperty()->SetLineWidth(2);
+    lineActor->GetProperty()->SetRepresentationToWireframe();
+    lineActor->GetProperty()->SetInterpolationToFlat();
+
+    m_renderer->AddActor(lineActor);
+
+    //m_renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
+    //m_renderer->ResetCamera();
 
     m_renderer->AddViewProp(actor);
 }
