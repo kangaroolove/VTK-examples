@@ -31,6 +31,7 @@
 #include <vtkPolyData.h>
 #include <vtkCamera.h>
 #include <vtkAppendPolyData.h>
+#include <vtkGlyph3D.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -68,18 +69,124 @@ public:
   void OnLeftButtonUp() override
   {
     vtkInteractorStyleImage::OnLeftButtonUp();
-    m_leftButtonPress = false;
+      m_leftButtonPress = false;
+
+      #if 1
+
+      vtkNew<vtkSphereSource> sphereSource;
+      sphereSource->SetPhiResolution(30);
+      sphereSource->SetThetaResolution(30);
+      sphereSource->SetCenter(0, 0, 0);
+      sphereSource->SetRadius(10);
+      sphereSource->Update();
+
+      vtkNew<vtkCutter> circleCutter;
+      vtkNew<vtkPlane> cutPlane;
+      cutPlane->SetOrigin(0, 0, 0);
+      cutPlane->SetNormal(0, 0, 1);
+      circleCutter->SetCutFunction(cutPlane);
+      circleCutter->SetInputConnection(sphereSource->GetOutputPort());
+
+      vtkNew<vtkGlyph3D> glyph3D;
+      glyph3D->SetSourceConnection(circleCutter->GetOutputPort());
+      glyph3D->SetInputData(m_lineData);
+      glyph3D->FillCellDataOn();
+
+      double* point = m_linePoints->GetPoint(0);
+
+      vtkNew<vtkPolyDataMapper> mapper;
+      mapper->SetInputConnection(glyph3D->GetOutputPort());
+
+      vtkNew<vtkActor> actor;
+      actor->SetMapper(mapper);
+
+      m_renderer->AddActor(actor);
+
+      // vtkNew<vtkTransformPolyDataFilter> filter; 
+
+      // vtkNew<vtkAppendPolyData> appendPolyData;
+      // for (vtkIdType i = 0; i < m_linePoints->GetNumberOfPoints(); i++)
+      // {
+      //   vtkNew<vtkTransform> transform;
+      //   double* position = m_linePoints->GetPoint(i);
+      //   transform->Translate(position[0], position[1], 0);
+      //   vtkNew<vtkTransformPolyDataFilter> filter;
+      //   filter->SetInputConnection(circleCutter->GetOutputPort());
+      //   filter->SetTransform(transform);
+      //   filter->Update();
+
+      //   appendPolyData->AddInputConnection(filter->GetOutputPort());
+      // }
+
+      // appendPolyData->Update();
+
+      #endif
+
+
+#if 1
+        double origin[3] = { 0 };
+  double spacing[3] = { 0.5, 0.5, 0.5 };
+  int extent[6] = { 0, 99, 0, 99, 0, 99};
+
+  // polygonal data --> image stencil:
+  vtkNew<vtkPolyDataToImageStencil> pol2stenc;
+  //pol2stenc->SetTolerance(0); // important if extruder->SetVector(0, 0, 1) !!!
+  pol2stenc->SetInputConnection(glyph3D->GetOutputPort());
+  //pol2stenc->SetInputData(glyph3D);
+  pol2stenc->SetOutputOrigin(origin);
+  pol2stenc->SetOutputSpacing(spacing);
+  pol2stenc->SetOutputWholeExtent(extent);
+  pol2stenc->Update();
+
+  // cut the corresponding white image and set the background:
+
+    // vtkImageData* image = m_imageActor->GetInput();
+
+      vtkNew<vtkImageData> whiteImage;
+
+  whiteImage->SetSpacing(spacing);
+  whiteImage->SetExtent(0, 99, 0, 99, 0, 99);
+  whiteImage->SetOrigin(origin);
+  whiteImage->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
+
+  // fill the image with foreground voxels:
+  unsigned char inval = 255;
+  unsigned char outval = 0;
+  vtkIdType count = whiteImage->GetNumberOfPoints();
+  for (vtkIdType i = 0; i < count; ++i)
+  {
+    whiteImage->GetPointData()->GetScalars()->SetTuple1(i, inval);
+  }
+
+    vtkNew<vtkImageStencil> imgstenc;
+    imgstenc->SetInputData(whiteImage);
+    imgstenc->SetStencilConnection(pol2stenc->GetOutputPort());
+    imgstenc->ReverseStencilOff();
+    imgstenc->SetBackgroundValue(0);
+    imgstenc->Update();
+
+      m_imageActor->SetInputData(imgstenc->GetOutput());
+
+#endif
+
+      m_renderWindow->Render();
+
+
+
+
   } 
 
   void OnMouseMove() override
   {
     vtkInteractorStyleImage::OnMouseMove();
-    int eventPosition[2] = { 0 };
-    this->GetInteractor()->GetEventPosition(eventPosition);
 
     if (!m_leftButtonPress)
       return;
 
+
+
+    int eventPosition[2] = { 0 };
+    this->GetInteractor()->GetEventPosition(eventPosition);
     double distance = ((m_lastEventPosition[0] - eventPosition[0]) * (m_lastEventPosition[0] - eventPosition[0])) + ((m_lastEventPosition[1] - eventPosition[1]) * (m_lastEventPosition[1] - eventPosition[1]));
     // qDebug()<<"distance = "<<distance;
     if (distance > 0.0)
@@ -119,43 +226,40 @@ public:
 
       this->m_linePoints->GetData()->Modified();
 
-
-      vtkNew<vtkSphereSource> sphereSource;
-      sphereSource->SetPhiResolution(30);
-      sphereSource->SetThetaResolution(30);
-      sphereSource->SetCenter(0, 0, 0);
-      sphereSource->SetRadius(2);
-      sphereSource->Update();
-
-      vtkNew<vtkCutter> circleCutter;
-      vtkNew<vtkPlane> cutPlane;
-      cutPlane->SetOrigin(0, 0, 0);
-      cutPlane->SetNormal(0, 0, 1);
-      circleCutter->SetCutFunction(cutPlane);
-      circleCutter->SetInputConnection(sphereSource->GetOutputPort());
-
-      vtkNew<vtkTransformPolyDataFilter> filter; 
-
-      vtkNew<vtkAppendPolyData> appendPolyData;
-      for (vtkIdType i = 0; i < m_linePoints->GetNumberOfPoints(); i++)
-      {
-        vtkNew<vtkTransform> transform;
-        double* position = m_linePoints->GetPoint(i);
-        transform->Translate(position[0], position[1], 0);
-        vtkNew<vtkTransformPolyDataFilter> filter;
-        filter->SetInputConnection(circleCutter->GetOutputPort());
-        filter->SetTransform(transform);
-        filter->Update();
-
-        appendPolyData->AddInputConnection(filter->GetOutputPort());
-      }
-
-      appendPolyData->Update();
+      this->m_lineData->SetPoints(this->m_linePoints);
+      this->m_lineData->SetLines(this->m_lineCells);
+      this->m_lineData->Modified();
 
 
-      // this->m_lineData->SetPoints(this->m_linePoints);
-      // this->m_lineData->SetLines(this->m_lineCells);
-      // this->m_lineData->Modified();
+      // vtkNew<vtkSphereSource> sphereSource;
+      // sphereSource->SetPhiResolution(30);
+      // sphereSource->SetThetaResolution(30);
+      // sphereSource->SetCenter(0, 0, 0);
+      // sphereSource->SetRadius(2);
+      // sphereSource->Update();
+
+      // vtkNew<vtkCutter> circleCutter;
+      // vtkNew<vtkPlane> cutPlane;
+      // cutPlane->SetOrigin(0, 0, 0);
+      // cutPlane->SetNormal(0, 0, 1);
+      // circleCutter->SetCutFunction(cutPlane);
+      // circleCutter->SetInputConnection(sphereSource->GetOutputPort());
+
+      // vtkNew<vtkTransform> transform;
+      // transform->Translate(newPosition);
+      // vtkNew<vtkTransformPolyDataFilter> filter; 
+      // filter->SetTransform(transform);
+      // filter->SetInputConnection(circleCutter->GetOutputPort());
+
+      // vtkNew<vtkPolyDataMapper> cutterMapper;
+      // cutterMapper->SetInputConnection(filter->GetOutputPort());
+
+      // vtkNew<vtkActor> cutterActor;
+      // cutterActor->SetMapper(cutterMapper);
+
+      // this->m_renderer->AddActor(cutterActor);
+
+      this->m_renderWindow->Render();
 
 
   // 3D source sphere
@@ -209,53 +313,7 @@ public:
   // cutterActor->SetMapper(cutterMapper);
   // m_renderer->AddActor(cutterActor);
 
-    #if 1
 
-  double origin[3] = { 0 };
-  double spacing[3] = { 0.5, 0.5, 0.5 };
-  int extent[6] = { 0, 99, 0, 99, 0, 99};
-
-  // polygonal data --> image stencil:
-  vtkNew<vtkPolyDataToImageStencil> pol2stenc;
-  pol2stenc->SetTolerance(0); // important if extruder->SetVector(0, 0, 1) !!!
-  //pol2stenc->SetInputConnection(transformFilter->GetOutputPort());
-  pol2stenc->SetInputData(appendPolyData->GetOutput());
-  pol2stenc->SetOutputOrigin(origin);
-  pol2stenc->SetOutputSpacing(spacing);
-  pol2stenc->SetOutputWholeExtent(extent);
-  pol2stenc->Update();
-
-  // cut the corresponding white image and set the background:
-
-    // vtkImageData* image = m_imageActor->GetInput();
-
-      vtkNew<vtkImageData> whiteImage;
-
-  whiteImage->SetSpacing(spacing);
-  whiteImage->SetExtent(0, 99, 0, 99, 0, 99);
-  whiteImage->SetOrigin(origin);
-  whiteImage->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
-
-  // fill the image with foreground voxels:
-  unsigned char inval = 255;
-  unsigned char outval = 0;
-  vtkIdType count = whiteImage->GetNumberOfPoints();
-  for (vtkIdType i = 0; i < count; ++i)
-  {
-    whiteImage->GetPointData()->GetScalars()->SetTuple1(i, inval);
-  }
-
-    vtkNew<vtkImageStencil> imgstenc;
-    imgstenc->SetInputData(whiteImage);
-    imgstenc->SetStencilConnection(pol2stenc->GetOutputPort());
-    imgstenc->ReverseStencilOff();
-    imgstenc->SetBackgroundValue(0);
-    imgstenc->Update();
-
-      m_imageActor->SetInputData(imgstenc->GetOutput());
-      #endif
-
-      m_renderWindow->Render();
     }
 
     m_lastEventPosition[0] = eventPosition[0];
@@ -396,10 +454,6 @@ void VTKOpenGLWidget::createTestData()
     lineActor->GetProperty()->SetInterpolationToFlat();
 
     m_renderer->AddActor(lineActor);
-
-    //m_renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
-    //m_renderer->ResetCamera();
-
     m_renderer->AddViewProp(actor);
 }
 
