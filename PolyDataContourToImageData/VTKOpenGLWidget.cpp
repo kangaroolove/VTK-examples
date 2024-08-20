@@ -39,6 +39,8 @@
 #include <vtkPropPicker.h>
 #include <vtkPicker.h>
 #include <vtkCellPicker.h>
+#include <vtkMath.h>
+#include <vtkNrrdReader.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -100,6 +102,77 @@ public:
       qDebug()<<"pick pos z ="<<pos[2];
 
 
+      int roundPosition[3] = { 0 };
+      roundPosition[0] = vtkMath::Round(pos[0]);
+      roundPosition[1] = vtkMath::Round(pos[1]);
+      roundPosition[2] = pos[2];
+
+      qDebug()<<"roundPosition pos x ="<<roundPosition[0];
+      qDebug()<<"roundPosition pos y ="<<roundPosition[1];
+      qDebug()<<"roundPosition pos z ="<<roundPosition[2];
+
+
+      m_baseImage->Print(std::cout);
+#if 0
+      auto tuple = m_baseImage->GetScalarPointer(roundPosition);
+      int components = m_baseImage->GetNumberOfScalarComponents();
+
+      qDebug()<<"components number = "<<components;
+      
+
+      auto index = m_baseImage->FindPoint(roundPosition);
+      qDebug()<<"index = "<<index;
+
+      vtkNew<vtkPoints> surroundingPoints;
+      surroundingPoints->InsertNextPoint(pos);
+
+      const int radius = 3;
+
+      for (int i = 1; i <= radius; ++i)
+      {
+        surroundingPoints->InsertNextPoint(pos[0] - i, pos[1], pos[2]);
+        surroundingPoints->InsertNextPoint(pos[0] + i, pos[1], pos[2]);
+        surroundingPoints->InsertNextPoint(pos[0], pos[1] - i, pos[2]);
+        surroundingPoints->InsertNextPoint(pos[0], pos[1] + i, pos[2]);
+      }
+
+      vtkNew<vtkPoints> withinImagePoints;
+      for (vtkIdType i = 0; i < surroundingPoints->GetNumberOfPoints(); ++i)
+      {
+        if (m_baseImage->FindPoint(surroundingPoints->GetPoint(i)) >= 0)
+            withinImagePoints->InsertNextPoint(surroundingPoints->GetPoint(i));
+      }
+
+      vtkNew<vtkPoints> validPoints;
+      for (vtkIdType i = 0; i < withinImagePoints->GetNumberOfPoints(); ++i)
+      {
+        auto squaredDistance = vtkMath::Distance2BetweenPoints(pos, withinImagePoints->GetPoint(i));
+        auto distance = std::sqrt(squaredDistance);
+        if (distance  <= radius)
+          validPoints->InsertNextPoint(withinImagePoints->GetPoint(i));
+      }
+
+      std::vector<vtkIdType> pixelIds;
+      for (vtkIdType i = 0; i < validPoints->GetNumberOfPoints(); ++i)
+      {
+        pixelIds.push_back(m_baseImage->FindPoint(validPoints->GetPoint(i)));
+      }
+
+
+      for (auto& item : pixelIds)
+      {
+        m_baseImage->GetPointData()->GetScalars()->SetTuple1(item, 0);
+      }
+      #endif
+
+      m_renderWindow->Render();
+
+      // vtkNew<vtkPoints> points;
+      // for (int i = 0; i < 3; i++)
+      // {
+
+
+      // }
 
 
     //   double newPosition[3] = {
@@ -497,12 +570,14 @@ void VTKOpenGLWidget::createTestData()
 
   vtkNew<vtkImageData> grayImage;
   grayImage->DeepCopy(whiteImage);
-  initColor(grayImage, 150);
+  initColor(grayImage, 255);
+
+
 
     vtkNew<vtkImageActor> actor;
     actor->SetInputData(grayImage);
 
-    m_interactorStyle->setBaseImage(grayImage);
+    m_interactorStyle->setBaseImage(whiteImage);
     m_interactorStyle->setImageActor(actor);
     m_interactorStyle->setLinePoints(m_linePoints);
     m_interactorStyle->setLineCells(m_lineCells);
