@@ -32,6 +32,11 @@
 #include <vtkCamera.h>
 #include <vtkAppendPolyData.h>
 #include <vtkGlyph3D.h>
+#include <vtkCleanPolyData.h>
+#include <vtkPicker.h>
+#include <vtkAbstractPicker.h>
+#include <vtkAssemblyPath.h>
+#include <vtkPropPicker.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -71,7 +76,35 @@ public:
     vtkInteractorStyleImage::OnLeftButtonUp();
       m_leftButtonPress = false;
 
-      #if 1
+      int x = GetInteractor()->GetEventPosition()[0];
+      int y = GetInteractor()->GetEventPosition()[1];
+
+      vtkNew<vtkPropPicker> picker;
+      picker->Pick(x, y, 0, m_renderer);
+      auto path = picker->GetPath();
+      bool validPick = false;
+      vtkImageActor* imageActor = nullptr;
+
+      if (path)
+      {
+          vtkCollectionSimpleIterator sit;
+          path->InitTraversal(sit);
+          // vtkAssemblyNode *node;
+          for (int i = 0; i < path->GetNumberOfItems() && !validPick; ++i)
+          {
+            auto node = path->GetItemAsObject(i);
+            if (imageActor == dynamic_cast<vtkImageActor*>(node))
+            {
+              validPick = true;
+              break;
+            }
+          }
+      }
+
+      std::cout<<"validPick = "<<validPick;
+
+
+      #if 0
 
       vtkNew<vtkSphereSource> sphereSource;
       sphereSource->SetPhiResolution(30);
@@ -82,6 +115,7 @@ public:
 
       vtkNew<vtkCutter> circleCutter;
       vtkNew<vtkPlane> cutPlane;
+      //cutPlane->SetOrigin(point[0], point[1], 0);
       cutPlane->SetOrigin(0, 0, 0);
       cutPlane->SetNormal(0, 0, 1);
       circleCutter->SetCutFunction(cutPlane);
@@ -90,7 +124,20 @@ public:
       vtkNew<vtkGlyph3D> glyph3D;
       glyph3D->SetSourceConnection(circleCutter->GetOutputPort());
       glyph3D->SetInputData(m_lineData);
-      glyph3D->FillCellDataOn();
+
+      // vtkNew<vtkAppendPolyData> appendPolydata;
+      // appendPolydata->AddInputConnection(glyph3D->GetOutputPort());
+
+      // vtkNew<vtkCleanPolyData> cleanPolydata;
+      // cleanPolydata->SetInputConnection(glyph3D->GetOutputPort());
+
+
+      // vtkNew<vtkLinearExtrusionFilter> extrusionFilter;
+      // extrusionFilter->SetInputConnection(glyph3D->GetOutputPort());
+      // extrusionFilter->SetScaleFactor(1.);
+      // extrusionFilter->SetExtrusionTypeToVectorExtrusion();
+      // extrusionFilter->SetVector(0, 0, 1);
+      // extrusionFilter->CappingOn();
 
       double* point = m_linePoints->GetPoint(0);
 
@@ -123,7 +170,7 @@ public:
       #endif
 
 
-#if 1
+#if 0
         double origin[3] = { 0 };
   double spacing[3] = { 0.5, 0.5, 0.5 };
   int extent[6] = { 0, 99, 0, 99, 0, 99};
