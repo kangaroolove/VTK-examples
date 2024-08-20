@@ -37,6 +37,7 @@
 #include <vtkAbstractPicker.h>
 #include <vtkAssemblyPath.h>
 #include <vtkPropPicker.h>
+#include <vtkPointPicker.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -46,43 +47,17 @@ public:
 
   void OnLeftButtonDown() override
   {
-    vtkInteractorStyleImage::OnLeftButtonDown();
+
     m_leftButtonPress = true;
-
-        int eventPosition[2] = { 0 };
-    this->GetInteractor()->GetEventPosition(eventPosition);
-
-      double* worldPosition = nullptr;
-      vtkNew<vtkCoordinate> coordinate;
-      coordinate->SetCoordinateSystemToDisplay();
-      coordinate->SetValue(eventPosition[0], eventPosition[1], 0);
-      worldPosition = coordinate->GetComputedWorldValue(m_renderer);
-        qDebug()<<"x = "<<worldPosition[0];
-        qDebug()<<"y = "<<worldPosition[1];
-        qDebug()<<"z = "<<worldPosition[2];
-
-
-      double newPosition[3] = {
-        worldPosition[0],
-        worldPosition[1],
-        0
-      };
-
-    resetLine(newPosition);
-  }
-
-  void OnLeftButtonUp() override
-  {
-    vtkInteractorStyleImage::OnLeftButtonUp();
-      m_leftButtonPress = false;
 
       int x = GetInteractor()->GetEventPosition()[0];
       int y = GetInteractor()->GetEventPosition()[1];
 
-      vtkNew<vtkPropPicker> picker;
-      picker->Pick(x, y, 0, m_renderer);
+      vtkNew<vtkPointPicker> picker;
+      picker->Pick(x, y, 0.0, m_renderer);
       auto path = picker->GetPath();
       bool validPick = false;
+      vtkImageActor* imageActor = nullptr;
       if (path)
       {
           qDebug()<<"pick number = "<<path->GetNumberOfItems();
@@ -92,7 +67,7 @@ public:
           for (int i = 0; i < path->GetNumberOfItems() && !validPick; ++i)
           {
             auto node = path->GetNextNode(sit);
-            vtkImageActor* imageActor = dynamic_cast<vtkImageActor*>(node->GetViewProp());
+            imageActor = dynamic_cast<vtkImageActor*>(node->GetViewProp());
             if (imageActor)
             {
               validPick = true;
@@ -108,18 +83,49 @@ public:
         return;
       }
 
-      // double pos[3];
-      // qDebug()<<"old z = "<<pos[2];
-      // picker->GetPickPosition(pos);
-      // // Fixes some numerical problems with the picking.
-      // //double* bounds = imageActor->GetBounds();
-      // int axis = 2;
-      // pos[2] = bounds[2 * axis];
+      double pos[3] = { 0 };
+      picker->GetPickPosition(pos);
+      qDebug()<<"old z = "<<pos[2];
+      // Fixes some numerical problems with the picking.
+      double* bounds = imageActor->GetDisplayBounds();
+      int axis = 2;
+      pos[2] = bounds[2 * axis];
 
 
-      // qDebug()<<"x = "<<pos[0];
-      // qDebug()<<"y = "<<pos[1];
-      // qDebug()<<"new z = "<<pos[2];
+      qDebug()<<"x = "<<pos[0];
+      qDebug()<<"y = "<<pos[1];
+      qDebug()<<"new z = "<<pos[2];
+
+    //     int eventPosition[2] = { 0 };
+    // this->GetInteractor()->GetEventPosition(eventPosition);
+
+    //   double* worldPosition = nullptr;
+    //   vtkNew<vtkCoordinate> coordinate;
+    //   coordinate->SetCoordinateSystemToDisplay();
+    //   coordinate->SetValue(eventPosition[0], eventPosition[1], 0);
+    //   worldPosition = coordinate->GetComputedWorldValue(m_renderer);
+    //     qDebug()<<"x = "<<worldPosition[0];
+    //     qDebug()<<"y = "<<worldPosition[1];
+    //     qDebug()<<"z = "<<worldPosition[2];
+
+
+    //   double newPosition[3] = {
+    //     worldPosition[0],
+    //     worldPosition[1],
+    //     0
+    //   };
+
+    // resetLine(newPosition);
+
+    vtkInteractorStyleImage::OnLeftButtonDown();
+  }
+
+  void OnLeftButtonUp() override
+  {
+    vtkInteractorStyleImage::OnLeftButtonUp();
+      m_leftButtonPress = false;
+
+ 
 
       #if 0
 
