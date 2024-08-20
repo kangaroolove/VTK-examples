@@ -83,17 +83,17 @@ public:
       picker->Pick(x, y, 0, m_renderer);
       auto path = picker->GetPath();
       bool validPick = false;
-      vtkImageActor* imageActor = nullptr;
-
       if (path)
       {
+          qDebug()<<"pick number = "<<path->GetNumberOfItems();
           vtkCollectionSimpleIterator sit;
           path->InitTraversal(sit);
           // vtkAssemblyNode *node;
           for (int i = 0; i < path->GetNumberOfItems() && !validPick; ++i)
           {
-            auto node = path->GetItemAsObject(i);
-            if (imageActor == dynamic_cast<vtkImageActor*>(node))
+            auto node = path->GetNextNode(sit);
+            vtkImageActor* imageActor = dynamic_cast<vtkImageActor*>(node->GetViewProp());
+            if (imageActor)
             {
               validPick = true;
               break;
@@ -101,8 +101,25 @@ public:
           }
       }
 
-      std::cout<<"validPick = "<<validPick;
+      qDebug()<<"validPick = "<<validPick;
 
+      if (!validPick)
+      {
+        return;
+      }
+
+      // double pos[3];
+      // qDebug()<<"old z = "<<pos[2];
+      // picker->GetPickPosition(pos);
+      // // Fixes some numerical problems with the picking.
+      // //double* bounds = imageActor->GetBounds();
+      // int axis = 2;
+      // pos[2] = bounds[2 * axis];
+
+
+      // qDebug()<<"x = "<<pos[0];
+      // qDebug()<<"y = "<<pos[1];
+      // qDebug()<<"new z = "<<pos[2];
 
       #if 0
 
