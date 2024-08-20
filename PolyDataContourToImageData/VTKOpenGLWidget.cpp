@@ -37,7 +37,8 @@
 #include <vtkAbstractPicker.h>
 #include <vtkAssemblyPath.h>
 #include <vtkPropPicker.h>
-#include <vtkPointPicker.h>
+#include <vtkPicker.h>
+#include <vtkCellPicker.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -47,13 +48,18 @@ public:
 
   void OnLeftButtonDown() override
   {
-
     m_leftButtonPress = true;
 
       int x = GetInteractor()->GetEventPosition()[0];
       int y = GetInteractor()->GetEventPosition()[1];
 
-      vtkNew<vtkPointPicker> picker;
+      double* worldPosition = nullptr;
+      vtkNew<vtkCoordinate> coordinate;
+      coordinate->SetCoordinateSystemToDisplay();
+      coordinate->SetValue(x, y, 0);
+      worldPosition = coordinate->GetComputedWorldValue(m_renderer);
+
+      vtkNew<vtkCellPicker> picker;
       picker->Pick(x, y, 0.0, m_renderer);
       auto path = picker->GetPath();
       bool validPick = false;
@@ -83,30 +89,17 @@ public:
         return;
       }
 
-      double pos[3] = { 0 };
+      double pos[3];
       picker->GetPickPosition(pos);
-      qDebug()<<"old z = "<<pos[2];
       // Fixes some numerical problems with the picking.
       double* bounds = imageActor->GetDisplayBounds();
       int axis = 2;
-      pos[2] = bounds[2 * axis];
+      pos[axis] = bounds[2 * axis];
+      qDebug()<<"pick pos x ="<<pos[0];
+      qDebug()<<"pick pos y ="<<pos[1];
+      qDebug()<<"pick pos z ="<<pos[2];
 
 
-      qDebug()<<"x = "<<pos[0];
-      qDebug()<<"y = "<<pos[1];
-      qDebug()<<"new z = "<<pos[2];
-
-    //     int eventPosition[2] = { 0 };
-    // this->GetInteractor()->GetEventPosition(eventPosition);
-
-    //   double* worldPosition = nullptr;
-    //   vtkNew<vtkCoordinate> coordinate;
-    //   coordinate->SetCoordinateSystemToDisplay();
-    //   coordinate->SetValue(eventPosition[0], eventPosition[1], 0);
-    //   worldPosition = coordinate->GetComputedWorldValue(m_renderer);
-    //     qDebug()<<"x = "<<worldPosition[0];
-    //     qDebug()<<"y = "<<worldPosition[1];
-    //     qDebug()<<"z = "<<worldPosition[2];
 
 
     //   double newPosition[3] = {
@@ -249,6 +242,8 @@ public:
   void OnMouseMove() override
   {
     vtkInteractorStyleImage::OnMouseMove();
+    return;
+
 
     if (!m_leftButtonPress)
       return;
