@@ -54,115 +54,8 @@ public:
   void OnLeftButtonDown() override
   {
     m_leftButtonPress = true;
-
-      int x = GetInteractor()->GetEventPosition()[0];
-      int y = GetInteractor()->GetEventPosition()[1];
-      vtkNew<vtkCellPicker> picker;
-      picker->Pick(x, y, 0.0, m_renderer);
-      auto path = picker->GetPath();
-      bool validPick = false;
-      vtkImageActor* imageActor = nullptr;
-      if (path)
-      {
-          qDebug()<<"pick number = "<<path->GetNumberOfItems();
-          vtkCollectionSimpleIterator sit;
-          path->InitTraversal(sit);
-          // vtkAssemblyNode *node;
-          for (int i = 0; i < path->GetNumberOfItems() && !validPick; ++i)
-          {
-            auto node = path->GetNextNode(sit);
-            imageActor = dynamic_cast<vtkImageActor*>(node->GetViewProp());
-            if (imageActor)
-            {
-              validPick = true;
-              break;
-            }
-          }
-      }
-
-      qDebug()<<"validPick = "<<validPick;
-
-      if (!validPick)
-      {
-        return;
-      }
-
-      double pos[3];
-      picker->GetPickPosition(pos);
-      // Fixes some numerical problems with the picking.
-      double* bounds = imageActor->GetDisplayBounds();
-      int axis = 2;
-      pos[axis] = bounds[2 * axis];
-      qDebug()<<"pick pos x ="<<pos[0];
-      qDebug()<<"pick pos y ="<<pos[1];
-      qDebug()<<"pick pos z ="<<pos[2];
-      
-      const double radius = 1.5;
-
-      double origin[3] = { 0 };
-      m_baseImage->GetOrigin(origin);
-
-      double spacing[3] = { 0 };
-      m_baseImage->GetSpacing(spacing);
-      int imageI = (pos[0] - origin[0]) / spacing[0];
-      int imageJ = (pos[1] - origin[1]) / spacing[1];
-      int imageK = pos[2];
-
-      qDebug()<<"imageI = "<<imageI<<", round() = "<<(int)imageI;
-      qDebug()<<"imageJ = "<<imageJ<<", round() = "<<(int)imageJ;
-
-      int adjacentBlocks = radius / spacing[0];
-      qDebug()<<"AdjacentBlocks = "<<adjacentBlocks;
-
-      std::vector<std::pair<int, int>> blockIndexs;
-      for (int dx = -adjacentBlocks; dx <= adjacentBlocks; ++dx)
-        for (int dy = -adjacentBlocks; dy <= adjacentBlocks; ++dy)
-            blockIndexs.push_back({imageI + dx, imageJ + dy});
-            
-      qDebug()<<"blockIndexs size = "<<blockIndexs.size();
-      for (auto& item : blockIndexs)
-      {
-          qDebug()<<"\n";
-          qDebug()<<"x = "<<item.first;
-          qDebug()<<"y = "<<item.second;
-      }
-
-      double basePoint[3] = {
-        (imageI * spacing[0]) + origin[0],
-        (imageJ * spacing[1]) + origin[1],
-        pos[2]
-      };
-
-      vtkNew<vtkPoints> points;
-      for (auto& item : blockIndexs)
-      {
-        double x = (item.first * spacing[0]) + origin[0];
-        double y = (item.second * spacing[1]) + origin[1];
-        double z = pos[2];
-        points->InsertNextPoint(x, y, z);
-      }
-
-      std::vector<std::pair<int, int>> validBlockIndexs;
-      for (int i = 0; i < points->GetNumberOfPoints(); i++)
-      {
-        auto squaredDistance = vtkMath::Distance2BetweenPoints(points->GetPoint(i), basePoint);
-        if (squaredDistance <= radius)
-        {
-          validBlockIndexs.push_back(blockIndexs[i]);
-        }
-      }
-
-      for (auto& index : validBlockIndexs)
-      {
-        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, 0);
-        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 1, 0);
-        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 2, 0);
-      }
-
-      m_baseImage->Modified();
-      m_renderWindow->Render();
-
-      vtkInteractorStyleImage::OnLeftButtonDown();
+    applyPainting();
+    vtkInteractorStyleImage::OnLeftButtonDown();
   }
 
   void OnLeftButtonUp() override
@@ -175,56 +68,8 @@ public:
 
   void OnMouseMove() override
   {
-    vtkInteractorStyleImage::OnMouseMove();
-    return;
-
-
-    if (!m_leftButtonPress)
-      return;
-
-
-
-    int eventPosition[2] = { 0 };
-    this->GetInteractor()->GetEventPosition(eventPosition);
-    double distance = ((m_lastEventPosition[0] - eventPosition[0]) * (m_lastEventPosition[0] - eventPosition[0])) + ((m_lastEventPosition[1] - eventPosition[1]) * (m_lastEventPosition[1] - eventPosition[1]));
-    // qDebug()<<"distance = "<<distance;
-    if (distance > 0.0)
-    {
-
-
-      double* worldPosition = nullptr;
-      vtkNew<vtkCoordinate> coordinate;
-      coordinate->SetCoordinateSystemToDisplay();
-      coordinate->SetValue(eventPosition[0], eventPosition[1], 0);
-      worldPosition = coordinate->GetComputedWorldValue(m_renderer);
-        qDebug()<<"x = "<<worldPosition[0];
-        qDebug()<<"y = "<<worldPosition[1];
-        qDebug()<<"z = "<<worldPosition[2];
-
-
-      double newPosition[3] = {
-        worldPosition[0],
-        worldPosition[1],
-        0
-      };
-
-      currentPoints[0] = m_pickCount++;
-      currentPoints[1] = m_pickCount;
-
-      m_linePoints->InsertPoint(m_pickCount, newPosition);
-      m_lineCells->InsertNextCell(2, currentPoints);
-      m_lineCells->Modified();
-
-      this->m_linePoints->GetData()->Modified();
-
-      this->m_lineData->SetPoints(this->m_linePoints);
-      this->m_lineData->SetLines(this->m_lineCells);
-      this->m_lineData->Modified();
-
-      this->m_renderWindow->Render();
-    }
-    m_lastEventPosition[0] = eventPosition[0];
-    m_lastEventPosition[1] = eventPosition[1];
+    if (m_leftButtonPress)
+      applyPainting();
   }
 
   void setContouringImage(vtkImageData* image)
@@ -271,6 +116,117 @@ public:
   {
     this->m_pickCount = 0;
     this->m_linePoints->InsertPoint(m_pickCount, pos);
+  }
+
+  void applyPainting()
+  {
+  int x = GetInteractor()->GetEventPosition()[0];
+  int y = GetInteractor()->GetEventPosition()[1];
+
+        vtkNew<vtkCellPicker> picker;
+      picker->Pick(x, y, 0.0, m_renderer);
+      auto path = picker->GetPath();
+      bool validPick = false;
+      vtkImageActor* imageActor = nullptr;
+      if (path)
+      {
+          //qDebug()<<"pick number = "<<path->GetNumberOfItems();
+          vtkCollectionSimpleIterator sit;
+          path->InitTraversal(sit);
+          // vtkAssemblyNode *node;
+          for (int i = 0; i < path->GetNumberOfItems() && !validPick; ++i)
+          {
+            auto node = path->GetNextNode(sit);
+            imageActor = dynamic_cast<vtkImageActor*>(node->GetViewProp());
+            if (imageActor)
+            {
+              validPick = true;
+              break;
+            }
+          }
+      }
+
+      //qDebug()<<"validPick = "<<validPick;
+
+      if (!validPick)
+      {
+        return;
+      }
+
+      double pos[3];
+      picker->GetPickPosition(pos);
+      // Fixes some numerical problems with the picking.
+      double* bounds = imageActor->GetDisplayBounds();
+      int axis = 2;
+      pos[axis] = bounds[2 * axis];
+      // qDebug()<<"pick pos x ="<<pos[0];
+      // qDebug()<<"pick pos y ="<<pos[1];
+      // qDebug()<<"pick pos z ="<<pos[2];
+      
+      const double radius = 10;
+
+      double origin[3] = { 0 };
+      m_baseImage->GetOrigin(origin);
+
+      double spacing[3] = { 0 };
+      m_baseImage->GetSpacing(spacing);
+      int imageI = (pos[0] - origin[0]) / spacing[0];
+      int imageJ = (pos[1] - origin[1]) / spacing[1];
+      int imageK = pos[2];
+
+      // qDebug()<<"imageI = "<<imageI<<", round() = "<<(int)imageI;
+      // qDebug()<<"imageJ = "<<imageJ<<", round() = "<<(int)imageJ;
+
+      int adjacentBlocks = radius / spacing[0];
+      //qDebug()<<"AdjacentBlocks = "<<adjacentBlocks;
+
+      std::vector<std::pair<int, int>> blockIndexs;
+      for (int dx = -adjacentBlocks; dx <= adjacentBlocks; ++dx)
+        for (int dy = -adjacentBlocks; dy <= adjacentBlocks; ++dy)
+            blockIndexs.push_back({imageI + dx, imageJ + dy});
+            
+      // qDebug()<<"blockIndexs size = "<<blockIndexs.size();
+      // for (auto& item : blockIndexs)
+      // {
+      //     qDebug()<<"\n";
+      //     qDebug()<<"x = "<<item.first;
+      //     qDebug()<<"y = "<<item.second;
+      // }
+
+      double basePoint[3] = {
+        (imageI * spacing[0]) + origin[0],
+        (imageJ * spacing[1]) + origin[1],
+        pos[2]
+      };
+
+      vtkNew<vtkPoints> points;
+      for (auto& item : blockIndexs)
+      {
+        double x = (item.first * spacing[0]) + origin[0];
+        double y = (item.second * spacing[1]) + origin[1];
+        double z = pos[2];
+        points->InsertNextPoint(x, y, z);
+      }
+
+      std::vector<std::pair<int, int>> validBlockIndexs;
+      for (int i = 0; i < points->GetNumberOfPoints(); i++)
+      {
+        auto squaredDistance = vtkMath::Distance2BetweenPoints(points->GetPoint(i), basePoint);
+        if (squaredDistance <= radius)
+        {
+          validBlockIndexs.push_back(blockIndexs[i]);
+        }
+      }
+
+      for (auto& index : validBlockIndexs)
+      {
+        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, 0);
+        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 1, 0);
+        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 2, 0);
+      }
+
+      m_baseImage->Modified();
+      m_renderWindow->Render();
   }
 
 private:
