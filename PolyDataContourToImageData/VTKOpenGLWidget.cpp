@@ -43,6 +43,7 @@
 #include <vtkNrrdReader.h>
 #include <vtkImageCanvasSource2D.h>
 #include <array>
+#include <vtkMath.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -102,18 +103,8 @@ public:
       qDebug()<<"pick pos x ="<<pos[0];
       qDebug()<<"pick pos y ="<<pos[1];
       qDebug()<<"pick pos z ="<<pos[2];
-
-      // int roundPosition[3] = { 0 };
-      // roundPosition[0] = vtkMath::Round(pos[0]);
-      // roundPosition[1] = vtkMath::Round(pos[1]);
-      // roundPosition[2] = pos[2];
-
-      // qDebug()<<"roundPosition pos x ="<<roundPosition[0];
-      // qDebug()<<"roundPosition pos y ="<<roundPosition[1];
-      // qDebug()<<"roundPosition pos z ="<<roundPosition[2];
-
       
-      const double radius = 2.5;
+      const double radius = 1.5;
 
       double origin[3] = { 0 };
       m_baseImage->GetOrigin(origin);
@@ -122,12 +113,12 @@ public:
       m_baseImage->GetSpacing(spacing);
       int imageI = (pos[0] - origin[0]) / spacing[0];
       int imageJ = (pos[1] - origin[1]) / spacing[1];
+      int imageK = pos[2];
 
       qDebug()<<"imageI = "<<imageI<<", round() = "<<(int)imageI;
       qDebug()<<"imageJ = "<<imageJ<<", round() = "<<(int)imageJ;
 
-      //int adjacentBlocks = radius / spacing[0];
-      int adjacentBlocks = 1;
+      int adjacentBlocks = radius / spacing[0];
       qDebug()<<"AdjacentBlocks = "<<adjacentBlocks;
 
       std::vector<std::pair<int, int>> blockIndexs;
@@ -135,6 +126,8 @@ public:
         for (int dy = -adjacentBlocks; dy <= adjacentBlocks; ++dy)
             blockIndexs.push_back({imageI + dx, imageJ + dy});
 
+            
+      qDebug()<<"blockIndexs size = "<<blockIndexs.size();
       for (auto& item : blockIndexs)
       {
           qDebug()<<"\n";
@@ -142,6 +135,37 @@ public:
           qDebug()<<"y = "<<item.second;
       }
 
+      double basePoint[3] = {
+        (imageI * spacing[0]) + origin[0],
+        (imageJ * spacing[1]) + origin[1],
+        pos[2]
+      };
+
+      vtkNew<vtkPoints> points;
+      for (auto& item : blockIndexs)
+      {
+        double x = (item.first * spacing[0]) + origin[0];
+        double y = (item.second * spacing[1]) + origin[1];
+        double z = pos[2];
+        points->InsertNextPoint(x, y, z);
+      }
+
+      std::vector<std::pair<int, int>> validBlockIndexs;
+      for (int i = 0; i < points->GetNumberOfPoints(); i++)
+      {
+        auto squaredDistance = vtkMath::Distance2BetweenPoints(points->GetPoint(i), basePoint);
+        if (squaredDistance <= radius)
+        {
+          validBlockIndexs.push_back(blockIndexs[i]);
+        }
+      }
+
+      for (auto& index : validBlockIndexs)
+      {
+        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, 0);
+        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 1, 0);
+        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 2, 0);
+      }
       // int number = m_baseImage->GetNumberOfScalarComponents();
       // qDebug()<<"GetNumberOfScalarComponents = "<<number;
 
