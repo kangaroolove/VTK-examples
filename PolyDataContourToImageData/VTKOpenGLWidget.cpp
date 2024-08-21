@@ -57,13 +57,6 @@ public:
 
       int x = GetInteractor()->GetEventPosition()[0];
       int y = GetInteractor()->GetEventPosition()[1];
-
-      double* worldPosition = nullptr;
-      vtkNew<vtkCoordinate> coordinate;
-      coordinate->SetCoordinateSystemToDisplay();
-      coordinate->SetValue(x, y, 0);
-      worldPosition = coordinate->GetComputedWorldValue(m_renderer);
-
       vtkNew<vtkCellPicker> picker;
       picker->Pick(x, y, 0.0, m_renderer);
       auto path = picker->GetPath();
@@ -125,7 +118,6 @@ public:
       for (int dx = -adjacentBlocks; dx <= adjacentBlocks; ++dx)
         for (int dy = -adjacentBlocks; dy <= adjacentBlocks; ++dy)
             blockIndexs.push_back({imageI + dx, imageJ + dy});
-
             
       qDebug()<<"blockIndexs size = "<<blockIndexs.size();
       for (auto& item : blockIndexs)
