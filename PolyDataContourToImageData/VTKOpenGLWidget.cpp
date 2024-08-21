@@ -120,10 +120,10 @@ public:
 
   void applyPainting()
   {
-  int x = GetInteractor()->GetEventPosition()[0];
-  int y = GetInteractor()->GetEventPosition()[1];
+      int x = GetInteractor()->GetEventPosition()[0];
+      int y = GetInteractor()->GetEventPosition()[1];
 
-        vtkNew<vtkCellPicker> picker;
+      vtkNew<vtkCellPicker> picker;
       picker->Pick(x, y, 0.0, m_renderer);
       auto path = picker->GetPath();
       bool validPick = false;
@@ -146,7 +146,7 @@ public:
           }
       }
 
-      //qDebug()<<"validPick = "<<validPick;
+      qDebug()<<"validPick = "<<validPick;
 
       if (!validPick)
       {
@@ -159,11 +159,11 @@ public:
       double* bounds = imageActor->GetDisplayBounds();
       int axis = 2;
       pos[axis] = bounds[2 * axis];
-      // qDebug()<<"pick pos x ="<<pos[0];
-      // qDebug()<<"pick pos y ="<<pos[1];
-      // qDebug()<<"pick pos z ="<<pos[2];
+      qDebug()<<"pick pos x ="<<pos[0];
+      qDebug()<<"pick pos y ="<<pos[1];
+      qDebug()<<"pick pos z ="<<pos[2];
       
-      const double radius = 10;
+      const double radius = 1.5;
 
       double origin[3] = { 0 };
       m_baseImage->GetOrigin(origin);
@@ -174,8 +174,8 @@ public:
       int imageJ = (pos[1] - origin[1]) / spacing[1];
       int imageK = pos[2];
 
-      // qDebug()<<"imageI = "<<imageI<<", round() = "<<(int)imageI;
-      // qDebug()<<"imageJ = "<<imageJ<<", round() = "<<(int)imageJ;
+      qDebug()<<"imageI = "<<imageI<<", round() = "<<(int)imageI;
+      qDebug()<<"imageJ = "<<imageJ<<", round() = "<<(int)imageJ;
 
       int adjacentBlocks = radius / spacing[0];
       //qDebug()<<"AdjacentBlocks = "<<adjacentBlocks;
@@ -184,14 +184,21 @@ public:
       for (int dx = -adjacentBlocks; dx <= adjacentBlocks; ++dx)
         for (int dy = -adjacentBlocks; dy <= adjacentBlocks; ++dy)
             blockIndexs.push_back({imageI + dx, imageJ + dy});
-            
-      // qDebug()<<"blockIndexs size = "<<blockIndexs.size();
-      // for (auto& item : blockIndexs)
-      // {
-      //     qDebug()<<"\n";
-      //     qDebug()<<"x = "<<item.first;
-      //     qDebug()<<"y = "<<item.second;
-      // }
+
+      std::vector<std::pair<int, int>> filterBlockIndex;
+      for (auto& item : blockIndexs)
+      {
+        if (item.first >= 0 && item.second >= 0)
+          filterBlockIndex.push_back(item);
+      }
+
+      qDebug()<<"filterBlockIndex size = "<<blockIndexs.size();
+      for (auto& item : filterBlockIndex)
+      {
+          qDebug()<<"\n";
+          qDebug()<<"x = "<<item.first;
+          qDebug()<<"y = "<<item.second;
+      }
 
       double basePoint[3] = {
         (imageI * spacing[0]) + origin[0],
@@ -200,7 +207,7 @@ public:
       };
 
       vtkNew<vtkPoints> points;
-      for (auto& item : blockIndexs)
+      for (auto& item : filterBlockIndex)
       {
         double x = (item.first * spacing[0]) + origin[0];
         double y = (item.second * spacing[1]) + origin[1];
@@ -214,7 +221,7 @@ public:
         auto squaredDistance = vtkMath::Distance2BetweenPoints(points->GetPoint(i), basePoint);
         if (squaredDistance <= radius)
         {
-          validBlockIndexs.push_back(blockIndexs[i]);
+          validBlockIndexs.push_back(filterBlockIndex[i]);
         }
       }
 
