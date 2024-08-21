@@ -42,6 +42,7 @@
 #include <vtkMath.h>
 #include <vtkNrrdReader.h>
 #include <vtkImageCanvasSource2D.h>
+#include <array>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -102,39 +103,71 @@ public:
       qDebug()<<"pick pos y ="<<pos[1];
       qDebug()<<"pick pos z ="<<pos[2];
 
+      // int roundPosition[3] = { 0 };
+      // roundPosition[0] = vtkMath::Round(pos[0]);
+      // roundPosition[1] = vtkMath::Round(pos[1]);
+      // roundPosition[2] = pos[2];
 
-      int roundPosition[3] = { 0 };
-      roundPosition[0] = vtkMath::Round(pos[0]);
-      roundPosition[1] = vtkMath::Round(pos[1]);
-      roundPosition[2] = pos[2];
+      // qDebug()<<"roundPosition pos x ="<<roundPosition[0];
+      // qDebug()<<"roundPosition pos y ="<<roundPosition[1];
+      // qDebug()<<"roundPosition pos z ="<<roundPosition[2];
 
-      qDebug()<<"roundPosition pos x ="<<roundPosition[0];
-      qDebug()<<"roundPosition pos y ="<<roundPosition[1];
-      qDebug()<<"roundPosition pos z ="<<roundPosition[2];
+      
+      const double radius = 2.5;
+
+      double origin[3] = { 0 };
+      m_baseImage->GetOrigin(origin);
+
+      double spacing[3] = { 0 };
+      m_baseImage->GetSpacing(spacing);
+      int imageI = (pos[0] - origin[0]) / spacing[0];
+      int imageJ = (pos[1] - origin[1]) / spacing[1];
+
+      qDebug()<<"imageI = "<<imageI<<", round() = "<<(int)imageI;
+      qDebug()<<"imageJ = "<<imageJ<<", round() = "<<(int)imageJ;
+
+      //int adjacentBlocks = radius / spacing[0];
+      int adjacentBlocks = 1;
+      qDebug()<<"AdjacentBlocks = "<<adjacentBlocks;
+
+      std::vector<std::pair<int, int>> blockIndexs;
+      for (int dx = -adjacentBlocks; dx <= adjacentBlocks; ++dx)
+        for (int dy = -adjacentBlocks; dy <= adjacentBlocks; ++dy)
+            blockIndexs.push_back({imageI + dx, imageJ + dy});
+
+      for (auto& item : blockIndexs)
+      {
+          qDebug()<<"\n";
+          qDebug()<<"x = "<<item.first;
+          qDebug()<<"y = "<<item.second;
+      }
+
+      // int number = m_baseImage->GetNumberOfScalarComponents();
+      // qDebug()<<"GetNumberOfScalarComponents = "<<number;
+
+      // std::vector<std::array<int, 3>> validPoints = {
+      //   {roundPosition[0], roundPosition[1], roundPosition[2]},
+      //   {roundPosition[0] - 1, roundPosition[1], roundPosition[2]},
+      //   {roundPosition[0] + 1,  roundPosition[1], roundPosition[2]},
+
+      //   {roundPosition[0] + 1, roundPosition[1] + 1, roundPosition[2]},
+      //   {roundPosition[0], roundPosition[1] + 1, roundPosition[2]},
+      //   {roundPosition[0] - 1, roundPosition[1] + 1, roundPosition[2]},
+
+      //   {roundPosition[0], roundPosition[1] - 1, roundPosition[2]},
+      //   {roundPosition[0] - 1, roundPosition[1] -1, roundPosition[2]},
+      //   {roundPosition[0] + 1,  roundPosition[1] -1, roundPosition[2]}
+      // };
 
 
-      int number = m_baseImage->GetNumberOfScalarComponents();
-      qDebug()<<"GetNumberOfScalarComponents = "<<number;
+      // for (auto& point : validPoints)
+      // {
+      //   m_baseImage->SetScalarComponentFromDouble(point[0], point[1], point[2], 0, 0);
+      //   m_baseImage->SetScalarComponentFromDouble(point[0], point[1], point[2], 1, 0);
+      //   m_baseImage->SetScalarComponentFromDouble(point[0], point[1], point[2], 2, 0);
+      // }
 
-      double* spacing = m_baseImage->GetSpacing();
-      qDebug()<<"spacing[0] = "<<spacing[0];
-            qDebug()<<"spacing[1] = "<<spacing[1];
-                  qDebug()<<"spacing[2] = "<<spacing[2];
-
-      m_baseImage->SetScalarComponentFromDouble(roundPosition[0], roundPosition[1], roundPosition[2], 0, 0);
-      m_baseImage->SetScalarComponentFromDouble(roundPosition[0], roundPosition[1], roundPosition[2], 1, 0);
-      m_baseImage->SetScalarComponentFromDouble(roundPosition[0], roundPosition[1], roundPosition[2], 2, 0);
       m_baseImage->Modified();
-
-      const int radius = 5;
-      int extent[6] = {
-        roundPosition[0] - radius,
-        roundPosition[0] + radius,
-        roundPosition[1] - radius,
-        roundPosition[1] + radius,
-        roundPosition[2],
-        roundPosition[2]
-      };
 
       m_renderWindow->Render();
       // m_baseImage->Print(std::cout);
