@@ -41,6 +41,7 @@
 #include <vtkCellPicker.h>
 #include <vtkMath.h>
 #include <vtkNrrdReader.h>
+#include <vtkImageCanvasSource2D.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -112,21 +113,42 @@ public:
       qDebug()<<"roundPosition pos z ="<<roundPosition[2];
 
 
-      m_baseImage->Print(std::cout);
+      int number = m_baseImage->GetNumberOfScalarComponents();
+      qDebug()<<"GetNumberOfScalarComponents = "<<number;
+
+      double* spacing = m_baseImage->GetSpacing();
+      qDebug()<<"spacing[0] = "<<spacing[0];
+            qDebug()<<"spacing[1] = "<<spacing[1];
+                  qDebug()<<"spacing[2] = "<<spacing[2];
+
+      m_baseImage->SetScalarComponentFromDouble(roundPosition[0], roundPosition[1], roundPosition[2], 0, 0);
+      m_baseImage->SetScalarComponentFromDouble(roundPosition[0], roundPosition[1], roundPosition[2], 1, 0);
+      m_baseImage->SetScalarComponentFromDouble(roundPosition[0], roundPosition[1], roundPosition[2], 2, 0);
+      m_baseImage->Modified();
+
+      const int radius = 5;
+      int extent[6] = {
+        roundPosition[0] - radius,
+        roundPosition[0] + radius,
+        roundPosition[1] - radius,
+        roundPosition[1] + radius,
+        roundPosition[2],
+        roundPosition[2]
+      };
+
+      m_renderWindow->Render();
+      // m_baseImage->Print(std::cout);
 #if 0
       auto tuple = m_baseImage->GetScalarPointer(roundPosition);
-      int components = m_baseImage->GetNumberOfScalarComponents();
-
-      qDebug()<<"components number = "<<components;
       
 
-      auto index = m_baseImage->FindPoint(roundPosition);
+      auto index = m_baseImage->FindPoint(pos);
       qDebug()<<"index = "<<index;
 
       vtkNew<vtkPoints> surroundingPoints;
       surroundingPoints->InsertNextPoint(pos);
 
-      const int radius = 3;
+
 
       for (int i = 1; i <= radius; ++i)
       {
@@ -159,13 +181,13 @@ public:
       }
 
 
-      for (auto& item : pixelIds)
-      {
-        m_baseImage->GetPointData()->GetScalars()->SetTuple1(item, 0);
-      }
+      // for (auto& item : pixelIds)
+      // {
+      //   m_baseImage->GetPointData()->GetScalars()->SetTuple1(item, 0);
+      // }
       #endif
 
-      m_renderWindow->Render();
+
 
       // vtkNew<vtkPoints> points;
       // for (int i = 0; i < 3; i++)
@@ -553,31 +575,40 @@ void VTKOpenGLWidget::initialize()
 void VTKOpenGLWidget::createTestData()
 {
   // prepare the binary image's voxel grid
-  vtkNew<vtkImageData> whiteImage;
-  double spacing[3]; // desired volume spacing
-  spacing[0] = 0.5;
-  spacing[1] = 0.5;
-  spacing[2] = 0.5;
-  whiteImage->SetSpacing(spacing);
-  whiteImage->SetExtent(0, 99, 0, 99, 0, 99);
-  double origin[3] = { 0 };
-  whiteImage->SetOrigin(origin);
-  whiteImage->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
+  // vtkNew<vtkImageData> whiteImage;
+  // double spacing[3]; // desired volume spacing
+  // spacing[0] = 0.5;
+  // spacing[1] = 0.5;
+  // spacing[2] = 0.5;
+  // whiteImage->SetSpacing(spacing);
+  // whiteImage->SetExtent(0, 99, 0, 99, 0, 99);
+  // double origin[3] = { 0 };
+  // whiteImage->SetOrigin(origin);
+  // whiteImage->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
 
-  // fill the image with foreground voxels:
-  initColor(whiteImage, 255);
+  // // fill the image with foreground voxels:
+  // initColor(whiteImage, 255);
 
 
-  vtkNew<vtkImageData> grayImage;
-  grayImage->DeepCopy(whiteImage);
-  initColor(grayImage, 255);
+  // vtkNew<vtkImageData> grayImage;
+  // grayImage->DeepCopy(whiteImage);
+  // initColor(grayImage, 255);
+    vtkNew<vtkImageCanvasSource2D> source;
+    source->SetScalarTypeToUnsignedChar();
+    source->SetNumberOfScalarComponents(3);
+    source->SetExtent(0, 200, 0, 200, 0, 0);
 
+    // Create a red image.
+    source->SetDrawColor(255, 0, 0);
+    source->FillBox(0, 200, 0, 200);
+
+    source->Update();
 
 
     vtkNew<vtkImageActor> actor;
-    actor->SetInputData(grayImage);
+    actor->SetInputData(source->GetOutput());
 
-    m_interactorStyle->setBaseImage(whiteImage);
+    m_interactorStyle->setBaseImage(source->GetOutput());
     m_interactorStyle->setImageActor(actor);
     m_interactorStyle->setLinePoints(m_linePoints);
     m_interactorStyle->setLineCells(m_lineCells);
