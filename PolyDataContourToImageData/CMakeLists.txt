@@ -36,6 +36,8 @@ set(PROJECT_SOURCES
     main.cpp
     VTKOpenGLWidget.cpp
     VTKOpenGLWidget.h
+    Widget.cpp
+    Widget.h
 )
 
 set(PROJECT_UIS
