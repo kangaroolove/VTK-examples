@@ -136,9 +136,10 @@ public:
         auto adjacentPixelBlocks = calculateAdjacentPixelBlocks(m_radius, m_imageSpacing[0]);
         auto adjacentPixlBlocksIndex = getAdjacentPixelBlocksIndex(0, 0, adjacentPixelBlocks);
         double basePoint[3] = { 0 };
-        for (auto& item : adjacentPixlBlocksIndex)
+        auto pixelBlockIndexWithinRadius = getPixelBlockIndexWithinRadius(adjacentPixlBlocksIndex, basePoint, m_radius);
+        for (auto& item : pixelBlockIndexWithinRadius)
         {
-            // vtkMath::Distance2BetweenPoints();
+            qDebug() << "item x = " << item.first << ", item y = " << item.second;
         }
     }
 
