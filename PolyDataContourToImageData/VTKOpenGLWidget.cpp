@@ -275,7 +275,7 @@ void VTKOpenGLWidget::saveImageToLocal()
         return;
 
     vtkNew<vtkNIFTIImageWriter> writer;
-    writer->SetFileName("D:/contouring.nii");
+    writer->SetFileName("D:/contouring.nii.gz");
     writer->SetInputData(m_baseImage);
     writer->Update();
 }
