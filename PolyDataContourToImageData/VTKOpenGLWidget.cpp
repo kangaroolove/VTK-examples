@@ -121,6 +121,16 @@ public:
             m_imageSpacing[i] = imageSpacing[i];
     }
 
+    std::vector<std::pair<int, int>> getAdjacentPixelBlocksIndex(const int& imageI, const int& imageJ, const int& blockNum)
+    {
+        std::vector<std::pair<int, int>> adjacentPixelBlockIndex;
+        for (int dx = -blockNum; dx <= blockNum; ++dx)
+            for (int dy = -blockNum; dy <= blockNum; ++dy)
+                adjacentPixelBlockIndex.push_back({ imageI + dx, imageJ + dy });
+
+        return adjacentPixelBlockIndex;
+    }
+
     void initContouringCursor()
     {
     }
@@ -178,12 +188,7 @@ public:
         // qDebug() << "imageJ = " << imageJ << ", round() = " << (int)imageJ;
 
         int adjacentPixelBlocks = m_radius / m_imageSpacing[0];
-
-        std::vector<std::pair<int, int>> adjacentPixelBlocksIndex;
-        for (int dx = -adjacentPixelBlocks; dx <= adjacentPixelBlocks; ++dx)
-            for (int dy = -adjacentPixelBlocks; dy <= adjacentPixelBlocks; ++dy)
-                adjacentPixelBlocksIndex.push_back({ imageI + dx, imageJ + dy });
-
+        std::vector<std::pair<int, int>> adjacentPixelBlocksIndex = getAdjacentPixelBlocksIndex(imageI, imageJ, adjacentPixelBlocks);
         std::vector<std::pair<int, int>> validAdjacentPixelBlocksIndex;
 
         int extent[6];
