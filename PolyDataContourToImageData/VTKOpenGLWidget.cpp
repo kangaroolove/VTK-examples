@@ -115,6 +115,16 @@ public:
         m_eraseOn = on;
     }
 
+    void setImageSpacing(double imageSpacing[3])
+    {
+        for (int i = 0; i < 3; i++)
+            m_imageSpacing[i] = imageSpacing[i];
+    }
+
+    void initContouringCursor()
+    {
+    }
+
     void applyPainting()
     {
         int x = GetInteractor()->GetEventPosition()[0];
@@ -157,21 +167,17 @@ public:
         // qDebug() << "pick pos y =" << pos[1];
         // qDebug() << "pick pos z =" << pos[2];
 
-        const double radius = 5;
-
         double origin[3] = { 0 };
         m_baseImage->GetOrigin(origin);
 
-        double spacing[3] = { 0 };
-        m_baseImage->GetSpacing(spacing);
-        int imageI = (pos[0] - origin[0]) / spacing[0];
-        int imageJ = (pos[1] - origin[1]) / spacing[1];
+        int imageI = (pos[0] - origin[0]) / m_imageSpacing[0];
+        int imageJ = (pos[1] - origin[1]) / m_imageSpacing[1];
         int imageK = pos[2];
 
         // qDebug() << "imageI = " << imageI << ", round() = " << (int)imageI;
         // qDebug() << "imageJ = " << imageJ << ", round() = " << (int)imageJ;
 
-        int adjacentPixelBlocks = radius / spacing[0];
+        int adjacentPixelBlocks = m_radius / m_imageSpacing[0];
 
         std::vector<std::pair<int, int>> adjacentPixelBlocksIndex;
         for (int dx = -adjacentPixelBlocks; dx <= adjacentPixelBlocks; ++dx)
@@ -194,16 +200,16 @@ public:
         }
 
         double basePoint[3] = {
-            (imageI * spacing[0]) + origin[0],
-            (imageJ * spacing[1]) + origin[1],
+            (imageI * m_imageSpacing[0]) + origin[0],
+            (imageJ * m_imageSpacing[1]) + origin[1],
             pos[2]
         };
 
         vtkNew<vtkPoints> points;
         for (auto& item : validAdjacentPixelBlocksIndex)
         {
-            double x = (item.first * spacing[0]) + origin[0];
-            double y = (item.second * spacing[1]) + origin[1];
+            double x = (item.first * m_imageSpacing[0]) + origin[0];
+            double y = (item.second * m_imageSpacing[1]) + origin[1];
             double z = pos[2];
             points->InsertNextPoint(x, y, z);
         }
@@ -212,7 +218,7 @@ public:
         for (int i = 0; i < points->GetNumberOfPoints(); i++)
         {
             auto squaredDistance = vtkMath::Distance2BetweenPoints(points->GetPoint(i), basePoint);
-            if (squaredDistance <= radius)
+            if (squaredDistance <= m_radius)
                 finalPixelBlockIndex.push_back(validAdjacentPixelBlocksIndex[i]);
         }
 
@@ -239,6 +245,8 @@ private:
     int m_pickCount = 0;
     vtkIdType currentPoints[2];
     bool m_eraseOn = false;
+    double m_radius = 5.0;
+    std::array<double, 3> m_imageSpacing;
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
@@ -298,6 +306,7 @@ void VTKOpenGLWidget::createTestData()
     actor->SetInputData(source);
 
     m_interactorStyle->setBaseImage(source);
+    m_interactorStyle->setImageSpacing(source->GetSpacing());
     m_interactorStyle->setLinePoints(m_linePoints);
     m_interactorStyle->setLineCells(m_lineCells);
     m_interactorStyle->setLineData(m_lineData);
