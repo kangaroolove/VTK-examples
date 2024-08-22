@@ -18,5 +18,6 @@ private:
     void bindConnections();
 
     VTKOpenGLWidget* m_openGLWidget;
-    QPushButton* btnSaveImage;
+    QPushButton* m_btnSaveImage;
+    QPushButton* m_btnLoadImage;
 };

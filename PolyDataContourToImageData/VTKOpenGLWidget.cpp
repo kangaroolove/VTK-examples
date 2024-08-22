@@ -44,6 +44,7 @@
 #include <vtkImageCanvasSource2D.h>
 #include <array>
 #include <vtkMath.h>
+#include <vtkNIFTIImageWriter.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -262,14 +263,21 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     , m_linePoints(vtkSmartPointer<vtkPoints>::New())
     , m_lineCells(vtkSmartPointer<vtkCellArray>::New())
     , m_lineData(vtkSmartPointer<vtkPolyData>::New())
+    , m_baseImage(nullptr)
 {
     initialize();
     createTestData();
 }
 
-VTKOpenGLWidget::~VTKOpenGLWidget()
+void VTKOpenGLWidget::saveImageToLocal()
 {
+    if (!m_baseImage)
+        return;
 
+    vtkNew<vtkNIFTIImageWriter> writer;
+    writer->SetFileName("D:/contouring.nii");
+    writer->SetInputData(m_baseImage);
+    writer->Update();
 }
 
 void VTKOpenGLWidget::initialize()
@@ -293,6 +301,8 @@ void VTKOpenGLWidget::createTestData()
     source->SetDrawColor(255, 0, 0);
     source->FillBox(0, 200, 0, 200);
     source->Update();
+
+    m_baseImage = source->GetOutput();
 
     vtkNew<vtkImageActor> actor;
     actor->SetInputData(source->GetOutput());

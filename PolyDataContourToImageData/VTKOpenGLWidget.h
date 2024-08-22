@@ -15,7 +15,7 @@ class VTKOpenGLWidget : public QVTKOpenGLNativeWidget
 {
 public:
     VTKOpenGLWidget(QWidget* parent = nullptr);
-    ~VTKOpenGLWidget();
+    void saveImageToLocal();
 
 private:
     void initialize();
@@ -28,4 +28,5 @@ private:
     vtkSmartPointer<vtkPoints> m_linePoints;
     vtkSmartPointer<vtkCellArray> m_lineCells;
     vtkSmartPointer<vtkPolyData> m_lineData;
+    vtkImageData* m_baseImage;
 };

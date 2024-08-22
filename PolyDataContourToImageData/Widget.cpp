@@ -7,7 +7,7 @@
 Widget::Widget(QWidget* parent) :
     QWidget(parent),
     m_openGLWidget(new VTKOpenGLWidget),
-    btnSaveImage(new QPushButton("Save Image", this))
+    m_btnSaveImage(new QPushButton("Save Image", this))
 {
     initGui();
     bindConnections();
@@ -24,16 +24,16 @@ void Widget::initGui()
 QHBoxLayout *Widget::getToolButtonLayout()
 {
     auto layout = new QHBoxLayout();
-    layout->addWidget(btnSaveImage);
+    layout->addWidget(m_btnSaveImage);
     return layout;
 }
 
 void Widget::bindConnections()
 {
-    connect(btnSaveImage, &QPushButton::clicked, this, &Widget::onBtnSaveImageClicked);
+    connect(m_btnSaveImage, &QPushButton::clicked, this, &Widget::onBtnSaveImageClicked);
 }
 
 void Widget::onBtnSaveImageClicked()
 {
-
+    m_openGLWidget->saveImageToLocal();
 }
