@@ -41,6 +41,7 @@
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
 #include <vtkTransformPolyDataFilter.h>
+
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
 public:
@@ -165,30 +166,27 @@ public:
         qDebug() << "imageI = " << imageI << ", round() = " << (int)imageI;
         qDebug() << "imageJ = " << imageJ << ", round() = " << (int)imageJ;
 
-        int adjacentBlocks = radius / spacing[0];
-        // qDebug()<<"AdjacentBlocks = "<<adjacentBlocks;
+        int adjacentPixelBlocks = radius / spacing[0];
 
-        std::vector<std::pair<int, int>> blockIndexs;
-        for (int dx = -adjacentBlocks; dx <= adjacentBlocks; ++dx)
-            for (int dy = -adjacentBlocks; dy <= adjacentBlocks; ++dy)
-                blockIndexs.push_back({ imageI + dx, imageJ + dy });
+        std::vector<std::pair<int, int>> adjacentPixelBlocksIndex;
+        for (int dx = -adjacentPixelBlocks; dx <= adjacentPixelBlocks; ++dx)
+            for (int dy = -adjacentPixelBlocks; dy <= adjacentPixelBlocks; ++dy)
+                adjacentPixelBlocksIndex.push_back({ imageI + dx, imageJ + dy });
 
-        std::vector<std::pair<int, int>> filterBlockIndex;
-        for (auto& item : blockIndexs)
+        std::vector<std::pair<int, int>> validAdjacentPixelBlocksIndex;
+
+        int extent[6];
+        m_baseImage->GetExtent(extent);
+        int minIExtent = extent[0];
+        int maxIExtent = extent[1];
+        int minJExtent = extent[2];
+        int maxJExtent = extent[3];
+        for (auto& item : adjacentPixelBlocksIndex)
         {
-            if (item.first >= 0 && item.second >= 0)
-                filterBlockIndex.push_back(item);
+            if (item.first < minIExtent || item.first > maxIExtent || item.second < minJExtent || item.second > maxJExtent)
+                continue;
+            validAdjacentPixelBlocksIndex.push_back(item);
         }
-
-        qDebug() << "filterBlockIndex size = " << blockIndexs.size();
-        for (auto& item : filterBlockIndex)
-        {
-            qDebug() << "\n";
-            qDebug() << "x = " << item.first;
-            qDebug() << "y = " << item.second;
-        }
-
-        qDebug() << "Components number = " << m_baseImage->GetNumberOfScalarComponents();
 
         double basePoint[3] = {
             (imageI * spacing[0]) + origin[0],
@@ -197,7 +195,7 @@ public:
         };
 
         vtkNew<vtkPoints> points;
-        for (auto& item : filterBlockIndex)
+        for (auto& item : validAdjacentPixelBlocksIndex)
         {
             double x = (item.first * spacing[0]) + origin[0];
             double y = (item.second * spacing[1]) + origin[1];
@@ -205,20 +203,16 @@ public:
             points->InsertNextPoint(x, y, z);
         }
 
-        std::vector<std::pair<int, int>> validBlockIndexs;
+        std::vector<std::pair<int, int>> finalPixelBlockIndex;
         for (int i = 0; i < points->GetNumberOfPoints(); i++)
         {
             auto squaredDistance = vtkMath::Distance2BetweenPoints(points->GetPoint(i), basePoint);
             if (squaredDistance <= radius)
-            {
-                validBlockIndexs.push_back(filterBlockIndex[i]);
-            }
+                finalPixelBlockIndex.push_back(validAdjacentPixelBlocksIndex[i]);
         }
 
-        for (auto& index : validBlockIndexs)
-        {
+        for (auto& index : finalPixelBlockIndex)
             m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, 255);
-        }
 
         m_baseImage->Modified();
         m_renderWindow->Render();
