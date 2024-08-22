@@ -201,6 +201,8 @@ public:
           qDebug()<<"y = "<<item.second;
       }
 
+        qDebug()<<"Components number = "<<m_baseImage->GetNumberOfScalarComponents();
+
       double basePoint[3] = {
         (imageI * spacing[0]) + origin[0],
         (imageJ * spacing[1]) + origin[1],
@@ -228,9 +230,7 @@ public:
 
       for (auto& index : validBlockIndexs)
       {
-        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, 0);
-        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 1, 0);
-        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 2, 0);
+        m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, 255);
       }
 
       m_baseImage->Modified();
@@ -292,22 +292,20 @@ void VTKOpenGLWidget::initialize()
 
 void VTKOpenGLWidget::createTestData()
 {
-    vtkNew<vtkImageCanvasSource2D> source;
-    source->SetScalarTypeToUnsignedChar();
-    source->SetNumberOfScalarComponents(3);
-    source->SetExtent(0, 200, 0, 200, 0, 0);
+    int extent[6] = {0, 199, 0, 199, 0, 99};
+    vtkNew<vtkImageData> source;
+    source->SetSpacing(1.0, 1.0, 1.0);
+    source->SetOrigin(0, 0, 0);
+    source->SetExtent(extent);
+    source->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
+    initColor(source, 0);
 
-    // Create a red image.
-    source->SetDrawColor(255, 0, 0);
-    source->FillBox(0, 200, 0, 200);
-    source->Update();
-
-    m_baseImage = source->GetOutput();
+    m_baseImage = source;
 
     vtkNew<vtkImageActor> actor;
-    actor->SetInputData(source->GetOutput());
+    actor->SetInputData(source);
 
-    m_interactorStyle->setBaseImage(source->GetOutput());
+    m_interactorStyle->setBaseImage(source);
     m_interactorStyle->setImageActor(actor);
     m_interactorStyle->setLinePoints(m_linePoints);
     m_interactorStyle->setLineCells(m_lineCells);

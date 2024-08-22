@@ -20,7 +20,7 @@ public:
 private:
     void initialize();
     void createTestData();
-    void initColor(vtkImageData* image, const int& color);
+    void initColor(vtkImageData* image, const int &color);
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
