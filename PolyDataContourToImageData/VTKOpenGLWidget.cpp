@@ -67,11 +67,11 @@ public:
       m_renderWindow->Render();
   } 
 
-  void OnMouseMove() override
-  {
+void OnMouseMove() override
+{
     if (m_leftButtonPress)
-      applyPainting();
-  }
+        applyPainting();
+}
 
   void setContouringImage(vtkImageData* image)
   {
@@ -86,11 +86,6 @@ public:
   void setRenderWindow(vtkRenderWindow* renderWindow)
   {
     m_renderWindow = renderWindow;
-  }
-
-  void setImageActor(vtkImageActor* vtkImageActor)
-  {
-    m_imageActor = vtkImageActor;
   }
 
   void setBaseImage(vtkImageData* image)
@@ -243,7 +238,6 @@ private:
   vtkImageData* m_contouringImage = nullptr;
   vtkRenderer* m_renderer = nullptr;
   vtkRenderWindow* m_renderWindow;
-  vtkImageActor* m_imageActor;
   vtkImageData* m_baseImage;
   vtkPoints* m_linePoints;
   vtkCellArray* m_lineCells;
@@ -306,7 +300,6 @@ void VTKOpenGLWidget::createTestData()
     actor->SetInputData(source);
 
     m_interactorStyle->setBaseImage(source);
-    m_interactorStyle->setImageActor(actor);
     m_interactorStyle->setLinePoints(m_linePoints);
     m_interactorStyle->setLineCells(m_lineCells);
     m_interactorStyle->setLineData(m_lineData);
