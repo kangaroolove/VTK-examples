@@ -4,6 +4,7 @@
 class VTKOpenGLWidget;
 class QHBoxLayout;
 class QPushButton;
+class QCheckBox;
 
 class Widget : public QWidget
 {
@@ -19,5 +20,5 @@ private:
 
     VTKOpenGLWidget* m_openGLWidget;
     QPushButton* m_btnSaveImage;
-    QPushButton* m_btnLoadImage;
+    QCheckBox* m_eraseCheckBox;
 };

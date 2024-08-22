@@ -16,6 +16,7 @@ class VTKOpenGLWidget : public QVTKOpenGLNativeWidget
 public:
     VTKOpenGLWidget(QWidget* parent = nullptr);
     void saveImageToLocal();
+    void setEraseOn(bool on);
 
 private:
     void initialize();

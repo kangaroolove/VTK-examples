@@ -110,6 +110,11 @@ public:
         this->m_linePoints->InsertPoint(m_pickCount, pos);
     }
 
+    void setEraseOn(bool on)
+    {
+        m_eraseOn = on;
+    }
+
     void applyPainting()
     {
         int x = GetInteractor()->GetEventPosition()[0];
@@ -137,7 +142,7 @@ public:
             }
         }
 
-        qDebug() << "validPick = " << validPick;
+        // qDebug() << "validPick = " << validPick;
 
         if (!validPick)
             return;
@@ -148,11 +153,11 @@ public:
         double* bounds = imageActor->GetDisplayBounds();
         int axis = 2;
         pos[axis] = bounds[2 * axis];
-        qDebug() << "pick pos x =" << pos[0];
-        qDebug() << "pick pos y =" << pos[1];
-        qDebug() << "pick pos z =" << pos[2];
+        // qDebug() << "pick pos x =" << pos[0];
+        // qDebug() << "pick pos y =" << pos[1];
+        // qDebug() << "pick pos z =" << pos[2];
 
-        const double radius = 1.5;
+        const double radius = 5;
 
         double origin[3] = { 0 };
         m_baseImage->GetOrigin(origin);
@@ -163,8 +168,8 @@ public:
         int imageJ = (pos[1] - origin[1]) / spacing[1];
         int imageK = pos[2];
 
-        qDebug() << "imageI = " << imageI << ", round() = " << (int)imageI;
-        qDebug() << "imageJ = " << imageJ << ", round() = " << (int)imageJ;
+        // qDebug() << "imageI = " << imageI << ", round() = " << (int)imageI;
+        // qDebug() << "imageJ = " << imageJ << ", round() = " << (int)imageJ;
 
         int adjacentPixelBlocks = radius / spacing[0];
 
@@ -212,7 +217,10 @@ public:
         }
 
         for (auto& index : finalPixelBlockIndex)
-            m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, 255);
+        {
+            double color = m_eraseOn ? 0 : 255.0;
+            m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, color);
+        }
 
         m_baseImage->Modified();
         m_renderWindow->Render();
@@ -230,6 +238,7 @@ private:
     vtkPolyData* m_lineData;
     int m_pickCount = 0;
     vtkIdType currentPoints[2];
+    bool m_eraseOn = false;
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
@@ -256,6 +265,11 @@ void VTKOpenGLWidget::saveImageToLocal()
     writer->SetFileName("D:/contouring.nii.gz");
     writer->SetInputData(m_baseImage);
     writer->Update();
+}
+
+void VTKOpenGLWidget::setEraseOn(bool on)
+{
+    m_interactorStyle->setEraseOn(on);
 }
 
 void VTKOpenGLWidget::initialize()
