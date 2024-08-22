@@ -133,6 +133,47 @@ public:
 
     void initContouringCursor()
     {
+        auto adjacentPixelBlocks = calculateAdjacentPixelBlocks(m_radius, m_imageSpacing[0]);
+        auto adjacentPixlBlocksIndex = getAdjacentPixelBlocksIndex(0, 0, adjacentPixelBlocks);
+        double basePoint[3] = { 0 };
+        for (auto& item : adjacentPixlBlocksIndex)
+        {
+            // vtkMath::Distance2BetweenPoints();
+        }
+    }
+
+    int calculateAdjacentPixelBlocks(const double& radius, const double& spacing)
+    {
+        return radius / spacing;
+    }
+
+    std::vector<std::pair<int, int>> getPixelBlockIndexWithinRadius(const std::vector<std::pair<int, int>>& validAdjacentPixelBlocksIndex, double basePoint[3], const double& radius)
+    {
+        std::vector<std::pair<int, int>> pixelBlockIndex;
+
+        double spacing[3] = { 0 };
+        m_baseImage->GetSpacing(spacing);
+
+        double origin[3] = { 0 };
+        m_baseImage->GetOrigin(origin);
+
+        vtkNew<vtkPoints> points;
+        for (auto& item : validAdjacentPixelBlocksIndex)
+        {
+            double x = (item.first * spacing[0]) + origin[0];
+            double y = (item.second * spacing[1]) + origin[1];
+            double z = basePoint[2];
+            points->InsertNextPoint(x, y, z);
+        }
+
+        for (int i = 0; i < points->GetNumberOfPoints(); i++)
+        {
+            auto squaredDistance = vtkMath::Distance2BetweenPoints(points->GetPoint(i), basePoint);
+            if (squaredDistance <= (radius * radius))
+                pixelBlockIndex.push_back(validAdjacentPixelBlocksIndex[i]);
+        }
+
+        return pixelBlockIndex;
     }
 
     void applyPainting()
@@ -210,24 +251,8 @@ public:
             pos[2]
         };
 
-        vtkNew<vtkPoints> points;
-        for (auto& item : validAdjacentPixelBlocksIndex)
-        {
-            double x = (item.first * m_imageSpacing[0]) + origin[0];
-            double y = (item.second * m_imageSpacing[1]) + origin[1];
-            double z = pos[2];
-            points->InsertNextPoint(x, y, z);
-        }
-
-        std::vector<std::pair<int, int>> finalPixelBlockIndex;
-        for (int i = 0; i < points->GetNumberOfPoints(); i++)
-        {
-            auto squaredDistance = vtkMath::Distance2BetweenPoints(points->GetPoint(i), basePoint);
-            if (squaredDistance <= m_radius)
-                finalPixelBlockIndex.push_back(validAdjacentPixelBlocksIndex[i]);
-        }
-
-        for (auto& index : finalPixelBlockIndex)
+        auto pixelBlockIndexWithinRadius = getPixelBlockIndexWithinRadius(validAdjacentPixelBlocksIndex, basePoint, m_radius);
+        for (auto& index : pixelBlockIndexWithinRadius)
         {
             double color = m_eraseOn ? 0 : 255.0;
             m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, color);
@@ -250,7 +275,7 @@ private:
     int m_pickCount = 0;
     vtkIdType currentPoints[2];
     bool m_eraseOn = false;
-    double m_radius = 5.0;
+    double m_radius = 2.5;
     std::array<double, 3> m_imageSpacing;
 };
 vtkStandardNewMacro(InteractorStyleImage);
@@ -315,6 +340,7 @@ void VTKOpenGLWidget::createTestData()
     m_interactorStyle->setLinePoints(m_linePoints);
     m_interactorStyle->setLineCells(m_lineCells);
     m_interactorStyle->setLineData(m_lineData);
+    m_interactorStyle->initContouringCursor();
 
     vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputData(m_lineData);
