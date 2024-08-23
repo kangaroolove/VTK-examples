@@ -10,6 +10,7 @@
 #include <vtkCellPicker.h>
 #include <vtkCleanPolyData.h>
 #include <vtkConeSource.h>
+#include <vtkConvexHull2D.h>
 #include <vtkCoordinate.h>
 #include <vtkCutter.h>
 #include <vtkGenericOpenGLRenderWindow.h>
@@ -19,6 +20,7 @@
 #include <vtkImageData.h>
 #include <vtkImageStencil.h>
 #include <vtkInteractorStyleImage.h>
+#include <vtkLine.h>
 #include <vtkLinearExtrusionFilter.h>
 #include <vtkMath.h>
 #include <vtkNIFTIImageWriter.h>
@@ -40,7 +42,6 @@
 #include <vtkStripper.h>
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
-#include <vtkTransformPolyDataFilter.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -137,10 +138,58 @@ public:
         auto adjacentPixlBlocksIndex = getAdjacentPixelBlocksIndex(0, 0, adjacentPixelBlocks);
         double basePoint[3] = { 0 };
         auto pixelBlockIndexWithinRadius = getPixelBlockIndexWithinRadius(adjacentPixlBlocksIndex, basePoint, m_radius);
+        double origin[3];
+        m_baseImage->GetOrigin(origin);
+
+        double spacing[3];
+        m_baseImage->GetSpacing(spacing);
+
+        vtkNew<vtkPoints> points;
         for (auto& item : pixelBlockIndexWithinRadius)
         {
-            qDebug() << "item x = " << item.first << ", item y = " << item.second;
+            double point[3] = { 0 };
+            point[0] = origin[0] + (item.first * spacing[0]);
+            point[1] = origin[1] + (item.second * spacing[1]);
+            point[2] = basePoint[2];
+            points->InsertNextPoint(point);
         }
+
+        qDebug() << "number of points = " << points->GetNumberOfPoints();
+        // vtkNew<vtkPoints> convexHullPoints;
+        vtkConvexHull2D::CalculateConvexHull(points, m_linePoints, spacing[0]);
+
+        for (int i = 0; i < m_linePoints->GetNumberOfPoints(); ++i)
+        {
+            qDebug() << "x = " << m_linePoints->GetPoint(i)[0] << ", y = " << m_linePoints->GetPoint(i)[1] << ", z = " << m_linePoints->GetPoint(i)[2];
+        }
+        int lineIndex = 0;
+        for (; lineIndex < m_linePoints->GetNumberOfPoints() - 1; lineIndex++)
+        {
+            vtkIdType id[2] = { lineIndex, lineIndex + 1 };
+            qDebug() << "m_linePoints id[0] = " << id[0] << ", id[1] = " << id[1];
+            m_lineCells->InsertNextCell(2, id);
+        }
+        vtkIdType lastCell[2] = { 0, m_linePoints->GetNumberOfPoints() - 1 };
+        m_lineCells->InsertNextCell(2, lastCell);
+
+        qDebug() << "number of after points = " << m_linePoints->GetNumberOfPoints();
+
+        for (int i = 0; i < m_linePoints->GetNumberOfPoints(); i++)
+        {
+            qDebug() << "x = " << m_linePoints->GetPoint(i)[0] << ", y = " << m_linePoints->GetPoint(i)[1];
+        }
+
+        m_lineData->SetPoints(m_linePoints);
+        m_lineData->SetLines(m_lineCells);
+
+        vtkNew<vtkPolyDataMapper> mapper;
+        mapper->SetInputData(m_lineData);
+
+        vtkNew<vtkActor> lineActor;
+        lineActor->SetMapper(mapper);
+        lineActor->GetProperty()->SetColor(0, 0, 0);
+        lineActor->GetProperty()->SetLineWidth(2);
+        m_renderer->AddActor(lineActor);
     }
 
     int calculateAdjacentPixelBlocks(const double& radius, const double& spacing)
@@ -313,7 +362,7 @@ void VTKOpenGLWidget::setEraseOn(bool on)
 
 void VTKOpenGLWidget::initialize()
 {
-    m_renderer->SetBackground(1.0, 1.0, 0.0);
+    m_renderer->SetBackground(1.0, 0.0, 1.0);
     m_renderWindow->AddRenderer(m_renderer);
     SetRenderWindow(m_renderWindow);
     m_interactorStyle->setRenderer(m_renderer);
@@ -353,8 +402,8 @@ void VTKOpenGLWidget::createTestData()
     lineActor->GetProperty()->SetRepresentationToWireframe();
     lineActor->GetProperty()->SetInterpolationToFlat();
 
-    m_renderer->AddActor(lineActor);
-    m_renderer->AddViewProp(actor);
+    // m_renderer->AddActor(lineActor);
+    // m_renderer->AddViewProp(actor);
 }
 
 void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color)
