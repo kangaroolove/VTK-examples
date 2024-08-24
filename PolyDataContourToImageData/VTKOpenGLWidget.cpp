@@ -115,10 +115,9 @@ public:
         picker->Pick(x, y, 0.0, m_renderer);
         double pos[3];
         picker->GetPickPosition(pos);
-        //pos[2] += 0.001;
-        qDebug()<<"pos[0] = "<<pos[0]<<", pos[1] = "<<pos[1]<<", pos[2] = "<<pos[2];
-
-
+        // Make sure cursor in front of image
+        pos[2] += 0.001;
+        //qDebug()<<"pos[0] = "<<pos[0]<<", pos[1] = "<<pos[1]<<", pos[2] = "<<pos[2];
         m_cursorActor->SetPosition(pos);
         //m_cursorActor->set
     }
