@@ -42,6 +42,7 @@
 #include <vtkStripper.h>
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
+#include <vtkPolyDataMapper2D.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -85,32 +86,6 @@ public:
         m_renderWindow = renderWindow;
     }
 
-    void setBaseImage(vtkImageData* image)
-    {
-        m_baseImage = image;
-    }
-
-    void setLinePoints(vtkPoints* linePoints)
-    {
-        m_linePoints = linePoints;
-    }
-
-    void setLineCells(vtkCellArray* lineCells)
-    {
-        m_lineCells = lineCells;
-    }
-
-    void setLineData(vtkPolyData* lineData)
-    {
-        m_lineData = lineData;
-    }
-
-    void resetLine(double* pos)
-    {
-        this->m_pickCount = 0;
-        this->m_linePoints->InsertPoint(m_pickCount, pos);
-    }
-
     void setEraseOn(bool on)
     {
         m_eraseOn = on;
@@ -139,10 +114,10 @@ public:
         double basePoint[3] = { 0 };
         auto pixelBlockIndexWithinRadius = getPixelBlockIndexWithinRadius(adjacentPixlBlocksIndex, basePoint, m_radius);
         double origin[3];
-        m_baseImage->GetOrigin(origin);
+        m_contouringImage->GetOrigin(origin);
 
         double spacing[3];
-        m_baseImage->GetSpacing(spacing);
+        m_contouringImage->GetSpacing(spacing);
 
         vtkNew<vtkPoints> points;
         for (auto& item : pixelBlockIndexWithinRadius)
@@ -156,34 +131,34 @@ public:
 
         qDebug() << "number of points = " << points->GetNumberOfPoints();
         // vtkNew<vtkPoints> convexHullPoints;
-        vtkConvexHull2D::CalculateConvexHull(points, m_linePoints, spacing[0]);
+        vtkConvexHull2D::CalculateConvexHull(points, m_cursorPoints, spacing[0]);
 
-        for (int i = 0; i < m_linePoints->GetNumberOfPoints(); ++i)
+        for (int i = 0; i < m_cursorPoints->GetNumberOfPoints(); ++i)
         {
-            qDebug() << "x = " << m_linePoints->GetPoint(i)[0] << ", y = " << m_linePoints->GetPoint(i)[1] << ", z = " << m_linePoints->GetPoint(i)[2];
+            qDebug() << "x = " << m_cursorPoints->GetPoint(i)[0] << ", y = " << m_cursorPoints->GetPoint(i)[1] << ", z = " << m_cursorPoints->GetPoint(i)[2];
         }
         int lineIndex = 0;
-        for (; lineIndex < m_linePoints->GetNumberOfPoints() - 1; lineIndex++)
+        for (; lineIndex < m_cursorPoints->GetNumberOfPoints() - 1; lineIndex++)
         {
             vtkIdType id[2] = { lineIndex, lineIndex + 1 };
             qDebug() << "m_linePoints id[0] = " << id[0] << ", id[1] = " << id[1];
-            m_lineCells->InsertNextCell(2, id);
+            m_cursorCells->InsertNextCell(2, id);
         }
-        vtkIdType lastCell[2] = { 0, m_linePoints->GetNumberOfPoints() - 1 };
-        m_lineCells->InsertNextCell(2, lastCell);
+        vtkIdType lastCell[2] = { 0, m_cursorPoints->GetNumberOfPoints() - 1 };
+        m_cursorCells->InsertNextCell(2, lastCell);
 
-        qDebug() << "number of after points = " << m_linePoints->GetNumberOfPoints();
+        qDebug() << "number of after points = " << m_cursorPoints->GetNumberOfPoints();
 
-        for (int i = 0; i < m_linePoints->GetNumberOfPoints(); i++)
+        for (int i = 0; i < m_cursorPoints->GetNumberOfPoints(); i++)
         {
-            qDebug() << "x = " << m_linePoints->GetPoint(i)[0] << ", y = " << m_linePoints->GetPoint(i)[1];
+            qDebug() << "x = " << m_cursorPoints->GetPoint(i)[0] << ", y = " << m_cursorPoints->GetPoint(i)[1];
         }
 
-        m_lineData->SetPoints(m_linePoints);
-        m_lineData->SetLines(m_lineCells);
+        m_cursorPolyData->SetPoints(m_cursorPoints);
+        m_cursorPolyData->SetLines(m_cursorCells);
 
         vtkNew<vtkPolyDataMapper> mapper;
-        mapper->SetInputData(m_lineData);
+        mapper->SetInputData(m_cursorPolyData);
 
         vtkNew<vtkActor> lineActor;
         lineActor->SetMapper(mapper);
@@ -202,10 +177,10 @@ public:
         std::vector<std::pair<int, int>> pixelBlockIndex;
 
         double spacing[3] = { 0 };
-        m_baseImage->GetSpacing(spacing);
+        m_contouringImage->GetSpacing(spacing);
 
         double origin[3] = { 0 };
-        m_baseImage->GetOrigin(origin);
+        m_contouringImage->GetOrigin(origin);
 
         vtkNew<vtkPoints> points;
         for (auto& item : validAdjacentPixelBlocksIndex)
@@ -269,7 +244,7 @@ public:
         // qDebug() << "pick pos z =" << pos[2];
 
         double origin[3] = { 0 };
-        m_baseImage->GetOrigin(origin);
+        m_contouringImage->GetOrigin(origin);
 
         int imageI = (pos[0] - origin[0]) / m_imageSpacing[0];
         int imageJ = (pos[1] - origin[1]) / m_imageSpacing[1];
@@ -283,7 +258,7 @@ public:
         std::vector<std::pair<int, int>> validAdjacentPixelBlocksIndex;
 
         int extent[6];
-        m_baseImage->GetExtent(extent);
+        m_contouringImage->GetExtent(extent);
         int minIExtent = extent[0];
         int maxIExtent = extent[1];
         int minJExtent = extent[2];
@@ -305,28 +280,24 @@ public:
         for (auto& index : pixelBlockIndexWithinRadius)
         {
             double color = m_eraseOn ? 0 : 255.0;
-            m_baseImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, color);
+            m_contouringImage->SetScalarComponentFromDouble(index.first, index.second, imageK, 0, color);
         }
 
-        m_baseImage->Modified();
+        m_contouringImage->Modified();
         m_renderWindow->Render();
     }
 
 private:
-    int m_lastEventPosition[2] = { 0 };
     bool m_leftButtonPress = false;
-    vtkImageData* m_contouringImage = nullptr;
     vtkRenderer* m_renderer = nullptr;
     vtkRenderWindow* m_renderWindow;
-    vtkImageData* m_baseImage;
-    vtkPoints* m_linePoints;
-    vtkCellArray* m_lineCells;
-    vtkPolyData* m_lineData;
-    int m_pickCount = 0;
-    vtkIdType currentPoints[2];
+    vtkImageData* m_contouringImage;
     bool m_eraseOn = false;
     double m_radius = 2.5;
     std::array<double, 3> m_imageSpacing;
+    vtkSmartPointer<vtkPoints> m_cursorPoints = vtkSmartPointer<vtkPoints>::New();
+    vtkSmartPointer<vtkCellArray> m_cursorCells = vtkSmartPointer<vtkCellArray>::New();
+    vtkSmartPointer<vtkPolyData> m_cursorPolyData = vtkSmartPointer<vtkPolyData>::New();
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
@@ -385,11 +356,8 @@ void VTKOpenGLWidget::createTestData()
     vtkNew<vtkImageActor> actor;
     actor->SetInputData(source);
 
-    m_interactorStyle->setBaseImage(source);
+    m_interactorStyle->setContouringImage(source);
     m_interactorStyle->setImageSpacing(source->GetSpacing());
-    m_interactorStyle->setLinePoints(m_linePoints);
-    m_interactorStyle->setLineCells(m_lineCells);
-    m_interactorStyle->setLineData(m_lineData);
     m_interactorStyle->initContouringCursor();
 
     vtkNew<vtkPolyDataMapper> mapper;
