@@ -101,9 +101,26 @@ public:
             m_imageSpacing[i] = imageSpacing[i];
     }
 
+    void setContouringImageActor(vtkImageActor* actor)
+    {
+        m_contouringImageActor = actor;
+    }
+
     void moveCursor()
     {
-        m_cursorActor->SetDisplayPosition(GetInteractor()->GetEventPosition()[0], GetInteractor()->GetEventPosition()[1]);
+        int x = GetInteractor()->GetEventPosition()[0];
+        int y = GetInteractor()->GetEventPosition()[1];
+
+        vtkNew<vtkCellPicker> picker;
+        picker->Pick(x, y, 0.0, m_renderer);
+        double pos[3];
+        picker->GetPickPosition(pos);
+        //pos[2] += 0.001;
+        qDebug()<<"pos[0] = "<<pos[0]<<", pos[1] = "<<pos[1]<<", pos[2] = "<<pos[2];
+
+
+        m_cursorActor->SetPosition(pos);
+        //m_cursorActor->set
     }
 
     std::vector<std::pair<int, int>> getAdjacentPixelBlocksIndex(const int& imageI, const int& imageJ, const int& blockNum)
@@ -297,14 +314,15 @@ private:
     vtkRenderer* m_renderer = nullptr;
     vtkRenderWindow* m_renderWindow;
     vtkImageData* m_contouringImage;
+    vtkImageActor* m_contouringImageActor; 
     bool m_eraseOn = false;
     double m_radius = 2.5;
     std::array<double, 3> m_imageSpacing;
     vtkSmartPointer<vtkPoints> m_cursorPoints = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> m_cursorCells = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkPolyData> m_cursorPolyData = vtkSmartPointer<vtkPolyData>::New();
-    vtkSmartPointer<vtkPolyDataMapper2D> m_cursorMapper = vtkSmartPointer<vtkPolyDataMapper2D>::New();
-    vtkSmartPointer<vtkActor2D> m_cursorActor = vtkSmartPointer<vtkActor2D>::New();
+    vtkSmartPointer<vtkPolyDataMapper> m_cursorMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    vtkSmartPointer<vtkActor> m_cursorActor = vtkSmartPointer<vtkActor>::New();
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
@@ -363,7 +381,10 @@ void VTKOpenGLWidget::createTestData()
     vtkNew<vtkImageActor> actor;
     actor->SetInputData(source);
 
+    m_renderer->AddViewProp(actor);
+
     m_interactorStyle->setContouringImage(source);
+    m_interactorStyle->setContouringImageActor(actor);
     m_interactorStyle->setImageSpacing(source->GetSpacing());
     m_interactorStyle->initContouringCursor();
 
@@ -378,7 +399,7 @@ void VTKOpenGLWidget::createTestData()
     lineActor->GetProperty()->SetInterpolationToFlat();
 
     // m_renderer->AddActor(lineActor);
-    m_renderer->AddViewProp(actor);
+
 }
 
 void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color)
