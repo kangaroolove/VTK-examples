@@ -43,6 +43,8 @@
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
 #include <vtkPolyDataMapper2D.h>
+#include <vtkActor2D.h>
+#include <vtkProperty2D.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -67,8 +69,10 @@ public:
 
     void OnMouseMove() override
     {
+        moveCursor();
         if (m_leftButtonPress)
             applyPainting();
+        m_renderWindow->Render();
     }
 
     void setContouringImage(vtkImageData* image)
@@ -95,6 +99,11 @@ public:
     {
         for (int i = 0; i < 3; i++)
             m_imageSpacing[i] = imageSpacing[i];
+    }
+
+    void moveCursor()
+    {
+        m_cursorActor->SetDisplayPosition(GetInteractor()->GetEventPosition()[0], GetInteractor()->GetEventPosition()[1]);
     }
 
     std::vector<std::pair<int, int>> getAdjacentPixelBlocksIndex(const int& imageI, const int& imageJ, const int& blockNum)
@@ -156,15 +165,11 @@ public:
 
         m_cursorPolyData->SetPoints(m_cursorPoints);
         m_cursorPolyData->SetLines(m_cursorCells);
+        m_cursorMapper->SetInputData(m_cursorPolyData);
 
-        vtkNew<vtkPolyDataMapper> mapper;
-        mapper->SetInputData(m_cursorPolyData);
-
-        vtkNew<vtkActor> lineActor;
-        lineActor->SetMapper(mapper);
-        lineActor->GetProperty()->SetColor(0, 0, 0);
-        lineActor->GetProperty()->SetLineWidth(2);
-        m_renderer->AddActor(lineActor);
+        m_cursorActor->SetMapper(m_cursorMapper);
+        m_cursorActor->GetProperty()->SetColor(0, 0, 1.0);
+        m_renderer->AddActor(m_cursorActor);
     }
 
     int calculateAdjacentPixelBlocks(const double& radius, const double& spacing)
@@ -298,6 +303,8 @@ private:
     vtkSmartPointer<vtkPoints> m_cursorPoints = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> m_cursorCells = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkPolyData> m_cursorPolyData = vtkSmartPointer<vtkPolyData>::New();
+    vtkSmartPointer<vtkPolyDataMapper2D> m_cursorMapper = vtkSmartPointer<vtkPolyDataMapper2D>::New();
+    vtkSmartPointer<vtkActor2D> m_cursorActor = vtkSmartPointer<vtkActor2D>::New();
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
@@ -371,7 +378,7 @@ void VTKOpenGLWidget::createTestData()
     lineActor->GetProperty()->SetInterpolationToFlat();
 
     // m_renderer->AddActor(lineActor);
-    // m_renderer->AddViewProp(actor);
+    m_renderer->AddViewProp(actor);
 }
 
 void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color)
