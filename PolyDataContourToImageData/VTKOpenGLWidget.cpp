@@ -3,6 +3,7 @@
 #include <array>
 #include <vtkAbstractPicker.h>
 #include <vtkActor.h>
+#include <vtkActor2D.h>
 #include <vtkAppendPolyData.h>
 #include <vtkAssemblyPath.h>
 #include <vtkCamera.h>
@@ -18,6 +19,9 @@
 #include <vtkImageActor.h>
 #include <vtkImageCanvasSource2D.h>
 #include <vtkImageData.h>
+#include <vtkImageMapper3D.h>
+#include <vtkImageSliceMapper.h>
+#include <vtkImageStack.h>
 #include <vtkImageStencil.h>
 #include <vtkInteractorStyleImage.h>
 #include <vtkLine.h>
@@ -33,18 +37,17 @@
 #include <vtkPoints.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkPolyDataMapper2D.h>
 #include <vtkPolyDataToImageStencil.h>
 #include <vtkPropPicker.h>
 #include <vtkProperty.h>
+#include <vtkProperty2D.h>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
 #include <vtkSphereSource.h>
 #include <vtkStripper.h>
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
-#include <vtkPolyDataMapper2D.h>
-#include <vtkActor2D.h>
-#include <vtkProperty2D.h>
 
 class InteractorStyleImage : public vtkInteractorStyleImage
 {
@@ -116,8 +119,8 @@ public:
         double pos[3];
         picker->GetPickPosition(pos);
         // Make sure cursor in front of image
-        pos[2] += 0.001;
-        //qDebug()<<"pos[0] = "<<pos[0]<<", pos[1] = "<<pos[1]<<", pos[2] = "<<pos[2];
+        // pos[2] += 0.001;
+        qDebug() << "pos[0] = " << pos[0] << ", pos[1] = " << pos[1] << ", pos[2] = " << pos[2];
         m_cursorActor->SetPosition(pos);
         //m_cursorActor->set
     }
@@ -157,12 +160,13 @@ public:
         double spacing[3];
         m_contouringImage->GetSpacing(spacing);
 
-        auto adjacentPixelBlocks = calculateAdjacentPixelBlocks(m_radius, spacing[0]);
-        auto adjacentPixlBlocksIndex = getAdjacentPixelBlocksIndex(0, 0, adjacentPixelBlocks);
-        double basePoint[3] = { 0 };
-        auto pixelBlockIndexWithinRadius = getPixelBlockIndexWithinRadius(adjacentPixlBlocksIndex, basePoint, m_radius);
         double origin[3];
         m_contouringImage->GetOrigin(origin);
+
+        auto adjacentPixelBlocks = calculateAdjacentPixelBlocks(m_radius, spacing[0]);
+        auto adjacentPixlBlocksIndex = getAdjacentPixelBlocksIndex(0, 0, adjacentPixelBlocks);
+        double basePoint[3] = { origin[0], origin[1], origin[2] };
+        auto pixelBlockIndexWithinRadius = getPixelBlockIndexWithinRadius(adjacentPixlBlocksIndex, basePoint, m_radius);
 
         vtkNew<vtkPoints> points;
         for (auto& item : pixelBlockIndexWithinRadius)
@@ -262,10 +266,11 @@ public:
         int y = GetInteractor()->GetEventPosition()[1];
 
         vtkNew<vtkCellPicker> picker;
+        // vtkNew<vtkPropPicker> picker;
         picker->Pick(x, y, 0.0, m_renderer);
         auto path = picker->GetPath();
         bool validPick = false;
-        vtkImageActor* imageActor = nullptr;
+        vtkImageSlice* imageActor = nullptr;
         if (path)
         {
             vtkCollectionSimpleIterator sit;
@@ -274,8 +279,10 @@ public:
             for (int i = 0; i < path->GetNumberOfItems() && !validPick; ++i)
             {
                 auto node = path->GetNextNode(sit);
-                imageActor = dynamic_cast<vtkImageActor*>(node->GetViewProp());
-                if (imageActor)
+                imageActor = dynamic_cast<vtkImageSlice*>(node->GetViewProp());
+                qDebug() << "imageActor->GetMapper()->GetInput() = " << imageActor->GetMapper()->GetInput();
+                qDebug() << "m_contouringImage = " << m_contouringImage;
+                if (imageActor && imageActor->GetMapper()->GetInput() == m_contouringImage)
                 {
                     validPick = true;
                     break;
@@ -285,15 +292,15 @@ public:
 
         // qDebug() << "validPick = " << validPick;
 
-        if (!validPick)
-            return;
+        // if (!validPick)
+        //     return;
 
         double pos[3];
         picker->GetPickPosition(pos);
         // Fixes some numerical problems with the picking.
-        double* bounds = imageActor->GetDisplayBounds();
-        int axis = 2;
-        pos[axis] = bounds[2 * axis];
+        // double* bounds = imageActor->GetDisplayBounds();
+        // int axis = 2;
+        // pos[axis] = bounds[2 * axis];
         // qDebug() << "pick pos x =" << pos[0];
         // qDebug() << "pick pos y =" << pos[1];
         // qDebug() << "pick pos z =" << pos[2];
@@ -403,24 +410,63 @@ void VTKOpenGLWidget::initialize()
 
 void VTKOpenGLWidget::createTestData()
 {
-    int extent[6] = {0, 199, 0, 199, 0, 99};
+    vtkNew<vtkNrrdReader> reader;
+    reader->SetFileName("D:/UROPRO/patient/-1/-1/Patient20201029MR_T2W_SPAIR_ax.nrrd");
+    // reader->SetFileName("D:/MRI.nrrd");
+    reader->Update();
+
+    double spacing[3];
+    reader->GetDataSpacing(spacing);
+
+    qDebug() << "spacing";
+    for (int i = 0; i < 3; ++i)
+        qDebug() << spacing[i];
+
+    double origin[3];
+    reader->GetDataOrigin(origin);
+
+    qDebug() << "origin";
+    for (int i = 0; i < 3; ++i)
+        qDebug() << origin[i];
+
+    int extent[6];
+    reader->GetDataExtent(extent);
+
+    qDebug() << "extent";
+    for (int i = 0; i < 6; ++i)
+        qDebug() << extent[i];
+
+    // std::cout << *reader->GetTransform()->GetMatrix();
+
     vtkNew<vtkImageData> source;
-    source->SetSpacing(1.0, 1.0, 1.0);
-    source->SetOrigin(0, 0, 0);
-    source->SetExtent(extent);
+    source->SetSpacing(reader->GetDataSpacing());
+    source->SetOrigin(reader->GetDataOrigin());
+    source->SetExtent(reader->GetDataExtent());
     source->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
     initColor(source, 0);
 
     m_baseImage = source;
 
-    vtkNew<vtkImageActor> actor;
-    actor->SetInputData(source);
+    vtkNew<vtkImageSliceMapper> imageMapper;
+    imageMapper->SetInputData(source);
 
-    m_renderer->AddViewProp(actor);
+    vtkNew<vtkImageSlice> slice;
+    slice->SetMapper(imageMapper);
+
+    qDebug() << "bounds";
+    double bounds[6];
+    slice->GetBounds(bounds);
+    for (int i = 0; i < 6; i++)
+        qDebug() << bounds[i];
+
+    vtkNew<vtkImageStack> stack;
+    stack->AddImage(slice);
+
+    m_renderer->AddViewProp(stack);
 
     m_interactorStyle->initContouringCursor();
     m_interactorStyle->setContouringImage(source);
-    m_interactorStyle->setContouringImageActor(actor);
+    // m_interactorStyle->setContouringImageActor(actor);
 
     vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputData(m_lineData);
