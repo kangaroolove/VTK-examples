@@ -8,6 +8,9 @@
 ![image](https://github.com/kangaroolove/VTK-example/assets/16329871/5e7df04e-4579-439e-9c5f-bfc6ed86b654)
 ### DisplayOrthogonalSlice
 ![image](https://github.com/user-attachments/assets/b6ed4035-da60-4fd0-8f29-6d7c822de15e)
+### ContouringImageData
+![image](https://github.com/user-attachments/assets/1db46bac-5c80-4ab0-a6af-cbee8a59c533)
+
 
 
 
