@@ -158,23 +158,10 @@ public:
         double spacing[3];
         m_contouringImage->GetSpacing(spacing);
 
-        double origin[3];
-        m_contouringImage->GetOrigin(origin);
-
-        auto adjacentPixelBlocks = calculateAdjacentPixelBlocks(m_radius, spacing[0]);
-        auto adjacentPixlBlocksIndex = getAdjacentPixelBlocksIndex(0, 0, adjacentPixelBlocks);
-        double basePoint[3] = { origin[0], origin[1], origin[2] };
-        auto pixelBlockIndexWithinRadius = getPixelBlockIndexWithinRadius(adjacentPixlBlocksIndex, basePoint, m_radius);
-
+        m_pixelBlocklist = calculatePixelBlockList(m_radius);
         vtkNew<vtkPoints> points;
-        for (auto& item : pixelBlockIndexWithinRadius)
-        {
-            double point[3] = { 0 };
-            point[0] = origin[0] + (item.first * spacing[0]);
-            point[1] = origin[1] + (item.second * spacing[1]);
-            point[2] = basePoint[2];
-            points->InsertNextPoint(point);
-        }
+        for (auto& index : m_pixelBlocklist)
+            points->InsertNextPoint(index.first * spacing[0], index.second * spacing[0], 0);
 
         vtkNew<vtkPoints> convexHullPoint;
         vtkConvexHull2D::CalculateConvexHull(points, convexHullPoint, spacing[0]);
@@ -323,6 +310,8 @@ public:
     }
 
 private:
+    std::vector<std::pair<int, int>> calculatePixelBlockList(const double& radius);
+
     bool m_leftButtonPress = false;
     vtkRenderer* m_renderer = nullptr;
     vtkRenderWindow* m_renderWindow = nullptr;
@@ -330,6 +319,7 @@ private:
     vtkImageActor* m_contouringImageActor = nullptr; 
     bool m_eraseOn = false;
     double m_radius = 10.0;
+    std::vector<std::pair<int, int>> m_pixelBlocklist;
     vtkSmartPointer<vtkPoints> m_cursorPoints = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> m_cursorCells = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkPolyData> m_cursorPolyData = vtkSmartPointer<vtkPolyData>::New();
@@ -399,4 +389,28 @@ void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color)
     vtkIdType count = image->GetNumberOfPoints();
     for (vtkIdType i = 0; i < count; ++i)
         image->GetPointData()->GetScalars()->SetTuple1(i, color);
+}
+
+std::vector<std::pair<int, int>> InteractorStyleImage::calculatePixelBlockList(const double& radius)
+{
+    std::vector<std::pair<int, int>> pixelBlockList;
+
+    double spacing[3];
+    m_contouringImage->GetSpacing(spacing);
+
+    int adjacentPixelBlocks = radius / spacing[0];
+    auto adjacentPixelBlockIndex = getAdjacentPixelBlocksIndex(0, 0, adjacentPixelBlocks);
+    vtkNew<vtkPoints> points;
+    for (auto& index : adjacentPixelBlockIndex)
+        points->InsertNextPoint(index.first * spacing[0], index.second * spacing[0], 0);
+
+    double basePoint[3] = { 0 };
+    for (int i = 0; i < points->GetNumberOfPoints(); i++)
+    {
+        double squaredDistance = vtkMath::Distance2BetweenPoints(basePoint, points->GetPoint(i));
+        if (squaredDistance <= (radius * radius))
+            pixelBlockList.push_back(adjacentPixelBlockIndex[i]);
+    }
+
+    return pixelBlockList;
 }
