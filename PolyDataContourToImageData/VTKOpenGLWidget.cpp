@@ -30,7 +30,6 @@
 #include <vtkNIFTIImageWriter.h>
 #include <vtkNamedColors.h>
 #include <vtkNew.h>
-#include <vtkNrrdReader.h>
 #include <vtkPicker.h>
 #include <vtkPlane.h>
 #include <vtkPointData.h>
@@ -410,76 +409,22 @@ void VTKOpenGLWidget::initialize()
 
 void VTKOpenGLWidget::createTestData()
 {
-    vtkNew<vtkNrrdReader> reader;
-    reader->SetFileName("D:/UROPRO/patient/-1/-1/Patient20201029MR_T2W_SPAIR_ax.nrrd");
-    // reader->SetFileName("D:/MRI.nrrd");
-    reader->Update();
-
-    double spacing[3];
-    reader->GetDataSpacing(spacing);
-
-    qDebug() << "spacing";
-    for (int i = 0; i < 3; ++i)
-        qDebug() << spacing[i];
-
-    double origin[3];
-    reader->GetDataOrigin(origin);
-
-    qDebug() << "origin";
-    for (int i = 0; i < 3; ++i)
-        qDebug() << origin[i];
-
-    int extent[6];
-    reader->GetDataExtent(extent);
-
-    qDebug() << "extent";
-    for (int i = 0; i < 6; ++i)
-        qDebug() << extent[i];
-
-    // std::cout << *reader->GetTransform()->GetMatrix();
-
+    int extent[6] = { 0, 199, 0, 199, 0, 99 };
     vtkNew<vtkImageData> source;
-    source->SetSpacing(reader->GetDataSpacing());
-    source->SetOrigin(reader->GetDataOrigin());
-    source->SetExtent(reader->GetDataExtent());
+    source->SetSpacing(1.0, 1.0, 1.0);
+    source->SetOrigin(0, 0, 0);
+    source->SetExtent(extent);
     source->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
     initColor(source, 0);
 
     m_baseImage = source;
 
-    vtkNew<vtkImageSliceMapper> imageMapper;
-    imageMapper->SetInputData(source);
-
-    vtkNew<vtkImageSlice> slice;
-    slice->SetMapper(imageMapper);
-
-    qDebug() << "bounds";
-    double bounds[6];
-    slice->GetBounds(bounds);
-    for (int i = 0; i < 6; i++)
-        qDebug() << bounds[i];
-
-    vtkNew<vtkImageStack> stack;
-    stack->AddImage(slice);
-
-    m_renderer->AddViewProp(stack);
+    vtkNew<vtkImageActor> imageActor;
+    imageActor->SetInputData(source);
+    m_renderer->AddViewProp(imageActor);
 
     m_interactorStyle->initContouringCursor();
     m_interactorStyle->setContouringImage(source);
-    // m_interactorStyle->setContouringImageActor(actor);
-
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputData(m_lineData);
-
-    vtkNew<vtkActor> lineActor;
-    lineActor->SetMapper(mapper);
-    lineActor->GetProperty()->SetColor(0, 0, 0);
-    lineActor->GetProperty()->SetLineWidth(2);
-    lineActor->GetProperty()->SetRepresentationToWireframe();
-    lineActor->GetProperty()->SetInterpolationToFlat();
-
-    // m_renderer->AddActor(lineActor);
-
 }
 
 void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color)
