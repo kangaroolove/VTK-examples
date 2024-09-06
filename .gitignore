@@ -23,3 +23,5 @@
 /PolyDataContourToImageData/.vscode
 /PolyDataContourToImageData/build
 /vtkLine
+/ContouringImageData/.vscode
+/ContouringImageData/build
