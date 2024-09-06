@@ -26,8 +26,5 @@ private:
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
     vtkSmartPointer<InteractorStyleImage> m_interactorStyle;
-    vtkSmartPointer<vtkPoints> m_linePoints;
-    vtkSmartPointer<vtkCellArray> m_lineCells;
-    vtkSmartPointer<vtkPolyData> m_lineData;
     vtkImageData* m_baseImage;
 };

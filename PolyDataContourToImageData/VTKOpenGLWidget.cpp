@@ -119,7 +119,6 @@ public:
         picker->GetPickPosition(pos);
         // Make sure cursor in front of image
         // pos[2] += 0.001;
-        qDebug() << "pos[0] = " << pos[0] << ", pos[1] = " << pos[1] << ", pos[2] = " << pos[2];
         m_cursorActor->SetPosition(pos);
         //m_cursorActor->set
     }
@@ -178,20 +177,13 @@ public:
         }
 
         vtkNew<vtkPoints> convexHullPoint;
-        //qDebug() << "number of points = " << points->GetNumberOfPoints();
-        // vtkNew<vtkPoints> convexHullPoints;
         vtkConvexHull2D::CalculateConvexHull(points, convexHullPoint, spacing[0]);
 
-        // for (int i = 0; i < m_cursorPoints->GetNumberOfPoints(); ++i)
-        // {
-        //     qDebug() << "x = " << m_cursorPoints->GetPoint(i)[0] << ", y = " << m_cursorPoints->GetPoint(i)[1] << ", z = " << m_cursorPoints->GetPoint(i)[2];
-        // }
         vtkNew<vtkCellArray> cells;
         int lineIndex = 0;
         for (; lineIndex < convexHullPoint->GetNumberOfPoints() - 1; lineIndex++)
         {
             vtkIdType id[2] = { lineIndex, lineIndex + 1 };
-            qDebug() << "m_linePoints id[0] = " << id[0] << ", id[1] = " << id[1];
             cells->InsertNextCell(2, id);
         }
         vtkIdType lastCell[2] = { 0, convexHullPoint->GetNumberOfPoints() - 1 };
@@ -207,13 +199,6 @@ public:
         m_cursorPolyData->Modified();
 
         m_renderWindow->Render();
-
-
-        //qDebug() << "number of after points = " << m_cursorPoints->GetNumberOfPoints();
-        // for (int i = 0; i < m_cursorPoints->GetNumberOfPoints(); i++)
-        // {
-        //     qDebug() << "x = " << m_cursorPoints->GetPoint(i)[0] << ", y = " << m_cursorPoints->GetPoint(i)[1];
-        // }
     }
 
     int calculateAdjacentPixelBlocks(const double& radius, const double& spacing)
@@ -279,8 +264,6 @@ public:
             {
                 auto node = path->GetNextNode(sit);
                 imageActor = dynamic_cast<vtkImageSlice*>(node->GetViewProp());
-                qDebug() << "imageActor->GetMapper()->GetInput() = " << imageActor->GetMapper()->GetInput();
-                qDebug() << "m_contouringImage = " << m_contouringImage;
                 if (imageActor && imageActor->GetMapper()->GetInput() == m_contouringImage)
                 {
                     validPick = true;
@@ -289,20 +272,11 @@ public:
             }
         }
 
-        // qDebug() << "validPick = " << validPick;
-
-        // if (!validPick)
-        //     return;
+        if (!validPick)
+            return;
 
         double pos[3];
         picker->GetPickPosition(pos);
-        // Fixes some numerical problems with the picking.
-        // double* bounds = imageActor->GetDisplayBounds();
-        // int axis = 2;
-        // pos[axis] = bounds[2 * axis];
-        // qDebug() << "pick pos x =" << pos[0];
-        // qDebug() << "pick pos y =" << pos[1];
-        // qDebug() << "pick pos z =" << pos[2];
 
         double origin[3] = { 0 };
         m_contouringImage->GetOrigin(origin);
@@ -313,9 +287,6 @@ public:
         int imageI = (pos[0] - origin[0]) / spacing[0];
         int imageJ = (pos[1] - origin[1]) / spacing[1];
         int imageK = pos[2];
-
-        // qDebug() << "imageI = " << imageI << ", round() = " << (int)imageI;
-        // qDebug() << "imageJ = " << imageJ << ", round() = " << (int)imageJ;
 
         int adjacentPixelBlocks = m_radius / spacing[0];
         std::vector<std::pair<int, int>> adjacentPixelBlocksIndex = getAdjacentPixelBlocksIndex(imageI, imageJ, adjacentPixelBlocks);
@@ -367,15 +338,11 @@ private:
 };
 vtkStandardNewMacro(InteractorStyleImage);
 
-VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
-    : QVTKOpenGLNativeWidget(parent)
-    , m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New())
-    , m_renderer(vtkSmartPointer<vtkRenderer>::New())
-    , m_interactorStyle(vtkSmartPointer<InteractorStyleImage>::New())
-    , m_linePoints(vtkSmartPointer<vtkPoints>::New())
-    , m_lineCells(vtkSmartPointer<vtkCellArray>::New())
-    , m_lineData(vtkSmartPointer<vtkPolyData>::New())
-    , m_baseImage(nullptr)
+VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent) :
+    QVTKOpenGLNativeWidget(parent), m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New()),
+    m_renderer(vtkSmartPointer<vtkRenderer>::New()),
+    m_interactorStyle(vtkSmartPointer<InteractorStyleImage>::New()),
+    m_baseImage(nullptr)
 {
     initialize();
     createTestData();
