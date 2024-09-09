@@ -25,3 +25,5 @@
 /vtkLine
 /ContouringImageData/.vscode
 /ContouringImageData/build
+/ResetCamera/.vscode
+/ResetCamera/build
