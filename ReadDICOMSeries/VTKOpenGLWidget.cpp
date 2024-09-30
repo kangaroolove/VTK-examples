@@ -15,6 +15,7 @@
 #include <vtkImageSlice.h>
 #include <vtkImageResliceMapper.h>
 #include <vtkPlane.h>
+#include <vtkImageData.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
 {
@@ -115,8 +116,14 @@ void VTKOpenGLWidget::createTestData()
     reader->SetDirectoryName(dir.data());
     reader->Update();
 
+    double origin[3];
+    reader->GetDataOrigin(origin);
+    qDebug()<<"data origin[0] = "<<origin[0]<<", data origin[1] = "<<origin[1]<<", data origin[2] = "<<origin[2];
+
     int extent[6];
     reader->GetDataExtent(extent);
+
+    reader->GetOutput()->Print(std::cout);
 
     int index = 0;
     double level = 883;
@@ -130,10 +137,6 @@ void VTKOpenGLWidget::createTestData()
 
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputConnection(reader->GetOutputPort());
-
-    double origin[3];
-    mapper->GetSlicePlane()->GetOrigin(origin);
-    qDebug()<<"origin[0] = "<<origin[0]<<", origin[1] = "<<origin[1]<<", origin[2] = "<<origin[2];
 
     vtkNew<vtkImageSlice> slice;
     slice->SetMapper(mapper);
