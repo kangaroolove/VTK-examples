@@ -16,6 +16,11 @@
 #include <vtkImageResliceMapper.h>
 #include <vtkPlane.h>
 #include <vtkImageData.h>
+#include <itkImage.h>
+#include <itkImageSeriesReader.h>
+#include <itkGDCMImageIO.h>
+#include <itkGDCMSeriesFileNames.h>
+#include <itkImageToVTKImageFilter.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
 {
@@ -146,4 +151,55 @@ void VTKOpenGLWidget::createTestData()
 
     m_style->SetImageActor(actor);
     m_style->SetImageSlice(slice);
+
+    using ImageType = itk::Image<short, 3>;
+    using ReaderType = itk::ImageSeriesReader<ImageType>;
+
+    auto itkReader = ReaderType::New();
+    using ImageIOType = itk::GDCMImageIO;
+    auto dicomIO = ImageIOType::New();
+    
+    itkReader->SetImageIO(dicomIO);
+
+    using NamesGeneratorType = itk::GDCMSeriesFileNames;
+    auto nameGenerator = NamesGeneratorType::New();
+
+    nameGenerator->SetUseSeriesDetails(true);
+    nameGenerator->AddSeriesRestriction("0008|0021");
+    nameGenerator->SetDirectory(dir);
+
+    using SeriesIdContainer = std::vector<std::string>;
+    const SeriesIdContainer & seriesUID = nameGenerator->GetSeriesUIDs();
+    std::string seriesIdentifier;
+    seriesIdentifier = seriesUID.begin()->c_str();
+
+    using FileNamesContainer = std::vector<std::string>;
+    FileNamesContainer fileNames;
+    fileNames = nameGenerator->GetFileNames(seriesIdentifier);
+    itkReader->SetFileNames(fileNames);
+    try 
+    {
+        itkReader->Update();
+    }
+    catch (...)
+    {
+
+    }
+
+    using FilterType = itk::ImageToVTKImageFilter<ImageType>;
+    FilterType::Pointer filter = FilterType::New();
+    filter->SetInput(itkReader->GetOutput());
+    filter->Update();
+
+    qDebug()<<"itk image";
+    itkReader->GetOutput()->Print(std::cout);
+    qDebug()<<"--------------------------------------------------------------";
+
+    // Get the VTK image
+    auto image = filter->GetOutput();
+    if (image)
+    {
+        qDebug()<<"converted successfully";
+        image->Print(std::cout);
+    }
 }

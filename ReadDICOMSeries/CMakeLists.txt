@@ -20,6 +20,17 @@ find_package(VTK COMPONENTS
 )
 
 include(${VTK_USE_FILE})
+
+
+find_package(ITK REQUIRED
+  COMPONENTS
+  ITKCommon
+  ITKIOImageBase
+  ITKIOGDCM
+  ITKVtkGlue
+)
+include(${ITK_USE_FILE})
+
 if("${VTK_QT_VERSION}" STREQUAL "")
   message(FATAL_ERROR "VTK was not built with Qt")
 endif()
@@ -50,4 +61,4 @@ add_executable(${PROJECT_NAME}
 	${PROJECT_RESOURCES}
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets ${VTK_LIBRARIES} ${EXTRA_LIBS})
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets ${VTK_LIBRARIES} ${EXTRA_LIBS} ${ITK_LIBRARIES})
