@@ -5,6 +5,7 @@
 
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
+class KeyPressInteractorStyle;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget
 {
@@ -17,5 +18,7 @@ private:
     void createTestData();
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
-    vtkSmartPointer<vtkRenderer> m_renderer;
+    vtkSmartPointer<vtkRenderer> m_rendererLeft;
+    vtkSmartPointer<vtkRenderer> m_rendererRight;
+    vtkSmartPointer<KeyPressInteractorStyle> m_style;
 };
