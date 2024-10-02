@@ -37,6 +37,10 @@ void VTKOpenGLWidget::initialize()
 
 void VTKOpenGLWidget::createTestData()
 {
+    // Since VTK8.2.0 vtkImageData doesn't have directionMatrix and the origin is 
+    // always (0, 0, 0). I suggest don't use this way to save NIFTII image unless
+    // you upgrade the VTK version to 9.0+
+
     //std::string filePath = "D:/UROPRO/patient/-1/-1/333.nii.gz";
     std::string filePath = "D:/segmentedBlank.nii.gz";
     vtkNew<vtkNIFTIImageReader> reader;
