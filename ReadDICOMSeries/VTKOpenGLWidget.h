@@ -18,7 +18,6 @@ private:
     void createTestData();
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
-    vtkSmartPointer<vtkRenderer> m_rendererLeft;
-    vtkSmartPointer<vtkRenderer> m_rendererRight;
+    vtkSmartPointer<vtkRenderer> m_renderer;
     vtkSmartPointer<KeyPressInteractorStyle> m_style;
 };

@@ -79,10 +79,6 @@ public:
 
         vtkInteractorStyleTrackballCamera::OnKeyPress();
     }
-    void SetImageActor(vtkImageActor *actor)
-    {
-        mImageActor = actor;
-    }
 
     void SetImageSlice(vtkImageSlice *slice)
     {
@@ -109,8 +105,7 @@ vtkStandardNewMacro(KeyPressInteractorStyle);
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget* parent)
     : QVTKOpenGLNativeWidget(parent)
     , m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New())
-    , m_rendererLeft(vtkSmartPointer<vtkRenderer>::New())
-    , m_rendererRight(vtkSmartPointer<vtkRenderer>::New())
+    , m_renderer(vtkSmartPointer<vtkRenderer>::New())
     , m_style(vtkSmartPointer<KeyPressInteractorStyle>::New())
 {
     initialize();
@@ -124,17 +119,11 @@ VTKOpenGLWidget::~VTKOpenGLWidget()
 
 void VTKOpenGLWidget::initialize()
 {
-    //m_rendererLeft->SetViewport(0, 0, 0.5, 1.0);
-    //m_rendererLeft->SetBackground(1.0, 0.0, 0.0);
-
-    //m_rendererRight->SetViewport(0.5, 0, 1.0, 1.0);
-    m_rendererRight->SetBackground(0.0, 1.0, 0.0);
-
-    //m_renderWindow->AddRenderer(m_rendererLeft);
-    m_renderWindow->AddRenderer(m_rendererRight);
+    m_renderer->SetBackground(0.0, 1.0, 0.0);
+    m_renderWindow->AddRenderer(m_renderer);
     SetRenderWindow(m_renderWindow);
     m_renderWindow->GetInteractor()->SetInteractorStyle(m_style);
-    m_style->SetRenderer(m_rendererRight);
+    m_style->SetRenderer(m_renderer);
 }
 
 void VTKOpenGLWidget::createTestData()
@@ -142,28 +131,6 @@ void VTKOpenGLWidget::createTestData()
     std::string dir = "D:/Standard test-data/Set B - realPatient/Patient B/CBL_T2";
     int index = 0;
     double level = 883;
-
-    //std::string dir = "D:/Standard test-data/Set B - realPatient/Patient A - Registration/t2";
-    // vtkNew<vtkDICOMImageReader> reader;
-    // reader->SetDirectoryName(dir.data());
-    // reader->Update();
-
-    // double origin[3];
-    // reader->GetDataOrigin(origin);
-    // qDebug()<<"data origin[0] = "<<origin[0]<<", data origin[1] = "<<origin[1]<<", data origin[2] = "<<origin[2];
-
-    // int extent[6];
-    // reader->GetDataExtent(extent);
-
-    // reader->GetOutput()->Print(std::cout);
-
-    // vtkNew<vtkImageActor> actor;
-    // actor->SetInputData(reader->GetOutput());
-    // actor->GetProperty()->SetColorWindow(level * 2);
-    // actor->GetProperty()->SetColorLevel(level);
-    // actor->SetDisplayExtent(extent[0], extent[1], extent[2], extent[3], index, index);
-    // m_rendererLeft->AddViewProp(actor);
-    // m_style->SetImageActor(actor);
 
     using ImageType = itk::Image<short, 3>;
     using ReaderType = itk::ImageSeriesReader<ImageType>;
@@ -201,6 +168,7 @@ void VTKOpenGLWidget::createTestData()
 
     auto direction = itkReader->GetOutput()->GetDirection();
     
+    // Get direction matrix
     vtkNew<vtkMatrix4x4> matrix;
     matrix->Identity();
 
@@ -217,10 +185,6 @@ void VTKOpenGLWidget::createTestData()
     filter->SetInput(itkReader->GetOutput());
     filter->Update();
 
-    qDebug()<<"itk image";
-    //itkReader->GetOutput()->Print(std::cout);
-    qDebug()<<"--------------------------------------------------------------";
-
     // Get the VTK image
     auto image = filter->GetOutput();
     if (image)
@@ -229,6 +193,7 @@ void VTKOpenGLWidget::createTestData()
         //image->Print(std::cout);
     }
 
+    // If I don't use this, the application will crash
     vtkNew<vtkImageReslice> reslice;
     reslice->SetInputData(filter->GetOutput());
     reslice->Update();
@@ -238,15 +203,11 @@ void VTKOpenGLWidget::createTestData()
     vtkNew<vtkTransform> transform;
     transform->SetMatrix(matrix);
 
-    // vtkNew<vtkTransformFilter> transformFilter;
-    // transformFilter->SetInputConnection(reslice->GetOutputPort());
-    // transformFilter->SetTransform(transform);
-
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputData(reslice->GetOutput());
 
-    qDebug()<<"mapper->GetSliceAtFocalPoint() = "<<mapper->GetSliceAtFocalPoint();
-    qDebug()<<"mapper->SetSliceFacesCamera() = "<<mapper->GetSliceFacesCamera();
+    // qDebug()<<"mapper->GetSliceAtFocalPoint() = "<<mapper->GetSliceAtFocalPoint();
+    // qDebug()<<"mapper->SetSliceFacesCamera() = "<<mapper->GetSliceFacesCamera();
 
     mapper->SetSliceAtFocalPoint(true);
     mapper->SetSliceFacesCamera(true);
@@ -257,9 +218,10 @@ void VTKOpenGLWidget::createTestData()
     slice->GetProperty()->SetColorWindow(level * 2);
     slice->GetProperty()->SetColorLevel(level);
     slice->SetUserMatrix(matrix);
-    m_rendererRight->AddViewProp(slice);
+
+    m_renderer->AddViewProp(slice);
     m_style->SetImageSlice(slice);
 
-    m_rendererRight->GetActiveCamera()->ApplyTransform(transform);
-    m_rendererRight->ResetCamera();
+    m_renderer->GetActiveCamera()->ApplyTransform(transform);
+    m_renderer->ResetCamera();
 }
