@@ -28,6 +28,7 @@
 #include <vtkCamera.h>
 #include <vtkImageActor.h>
 #include <vtkAxesActor.h>
+#include <vtkImageProperty.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
 {
@@ -182,14 +183,14 @@ void VTKOpenGLWidget::createTestData()
     auto direction = itkReader->GetOutput()->GetDirection();
     
     // Get direction matrix
-    vtkNew<vtkMatrix4x4> matrix;
-    matrix->Identity();
+    vtkNew<vtkMatrix4x4> directionMatrix;
+    directionMatrix->Identity();
 
     for (unsigned int i = 0; i < 3; ++i)
     {
         for (unsigned int j = 0; j < 3; ++j)
         {
-            matrix->SetElement(i, j, direction(i, j));
+            directionMatrix->SetElement(i, j, direction(i, j));
         }
     }
 
@@ -209,20 +210,12 @@ void VTKOpenGLWidget::createTestData()
     vtkNew<vtkImageReslice> reslice;
     reslice->SetInputData(filter->GetOutput());
     reslice->Update();
-
-    reslice->GetOutput()->Print(std::cout);
-
-
-
-    vtkNew<vtkTransform> imageActorTransform;
-    imageActorTransform->SetMatrix(matrix);
-    imageActorTransform->Translate(20, 0, 0);
-
+    //reslice->GetOutput()->Print(std::cout);
+#if 0
     vtkNew<vtkImageActor> imageActor;
     imageActor->SetInputData(reslice->GetOutput());
     imageActor->GetProperty()->SetColorWindow(level * 2);
     imageActor->GetProperty()->SetColorLevel(level);
-    imageActor->SetUserTransform(imageActorTransform);
     //imageActor->SetUserMatrix(matrix);
     m_renderer->AddViewProp(imageActor);
     m_style->SetImageActor(imageActor);
@@ -243,37 +236,59 @@ void VTKOpenGLWidget::createTestData()
     // transform->Concatenate(matrix);
     //camera->ApplyTransform(imageActorTransform);
     m_renderer->ResetCamera();
-#if 0
+#else
     // If I don't use this, the application will crash
-    vtkNew<vtkImageReslice> reslice;
-    reslice->SetInputData(filter->GetOutput());
-    reslice->Update();
-
-    reslice->GetOutput()->Print(std::cout);
-
     vtkNew<vtkTransform> transform;
-    transform->SetMatrix(matrix);
+    transform->SetMatrix(directionMatrix);
+
+
+    double verticalNormal[3] = {
+        directionMatrix->GetElement(0, 1),
+        directionMatrix->GetElement(1, 1),
+        directionMatrix->GetElement(2, 1),
+    };
+
+    double bounds[6];
+    reslice->GetOutput()->GetBounds(bounds);
+
+    double middlePoint[] = {
+        (bounds[0] + bounds[1]) / 2,
+        (bounds[2] + bounds[3]) / 2,
+        (bounds[4] + bounds[5]) / 2,
+    };
 
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputData(reslice->GetOutput());
+    mapper->SetSliceFacesCamera(true);
+    mapper->SetSliceAtFocalPoint(true);
+    // mapper->GetSlicePlane()->SetNormal(normal);
+    // mapper->GetSlicePlane()->SetOrigin(middlePoint);
 
     // qDebug()<<"mapper->GetSliceAtFocalPoint() = "<<mapper->GetSliceAtFocalPoint();
     // qDebug()<<"mapper->SetSliceFacesCamera() = "<<mapper->GetSliceFacesCamera();
-
-    mapper->SetSliceAtFocalPoint(true);
-    mapper->SetSliceFacesCamera(true);
 
     vtkNew<vtkImageSlice> slice;
     slice->SetMapper(mapper);
 
     slice->GetProperty()->SetColorWindow(level * 2);
     slice->GetProperty()->SetColorLevel(level);
-    slice->SetUserMatrix(matrix);
+    slice->GetProperty()->SetInterpolationTypeToNearest();
+    slice->SetUserMatrix(directionMatrix);
 
     m_renderer->AddViewProp(slice);
     m_style->SetImageSlice(slice);
 
-    m_renderer->GetActiveCamera()->ApplyTransform(transform);
-    m_renderer->ResetCamera();
+    double position[3] = { 0 };
+    double newPosition[3];
+    double normal[3] = {
+        directionMatrix->GetElement(0, 2),
+        directionMatrix->GetElement(1, 2),
+        directionMatrix->GetElement(2, 2),
+    };
+    vtkMath::Add(middlePoint, normal, newPosition);
+    m_renderer->GetActiveCamera()->SetFocalPoint(middlePoint);
+    m_renderer->GetActiveCamera()->SetViewUp(verticalNormal);
+    m_renderer->GetActiveCamera()->SetPosition(newPosition);
+    m_renderer->ResetCamera(slice->GetBounds());
     #endif
 }
