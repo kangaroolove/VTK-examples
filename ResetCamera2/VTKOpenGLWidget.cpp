@@ -241,6 +241,7 @@ void VTKOpenGLWidget::createTestData()
     vtkNew<vtkTransform> transform;
     transform->SetMatrix(directionMatrix);
 
+    std::cout<<"directionMatrix = "<<*directionMatrix<<endl;
 
     double verticalNormal[3] = {
         directionMatrix->GetElement(0, 1),
@@ -248,7 +249,22 @@ void VTKOpenGLWidget::createTestData()
         directionMatrix->GetElement(2, 1),
     };
 
+    double horizontalNormal[3] = {
+        directionMatrix->GetElement(0, 0),
+        directionMatrix->GetElement(1, 0),
+        directionMatrix->GetElement(2, 0),
+    };
+
+    double planeNormal[3] = {
+        directionMatrix->GetElement(0, 2),
+        directionMatrix->GetElement(1, 2),
+        directionMatrix->GetElement(2, 2),
+    };
+
+    double position[3] = { 0 };
+    double newPosition[3];
     double bounds[6];
+    double tempPosition[3] = { 0 };
     reslice->GetOutput()->GetBounds(bounds);
 
     double middlePoint[] = {
@@ -261,11 +277,6 @@ void VTKOpenGLWidget::createTestData()
     mapper->SetInputData(reslice->GetOutput());
     mapper->SetSliceFacesCamera(true);
     mapper->SetSliceAtFocalPoint(true);
-    // mapper->GetSlicePlane()->SetNormal(normal);
-    // mapper->GetSlicePlane()->SetOrigin(middlePoint);
-
-    // qDebug()<<"mapper->GetSliceAtFocalPoint() = "<<mapper->GetSliceAtFocalPoint();
-    // qDebug()<<"mapper->SetSliceFacesCamera() = "<<mapper->GetSliceFacesCamera();
 
     vtkNew<vtkImageSlice> slice;
     slice->SetMapper(mapper);
@@ -278,16 +289,22 @@ void VTKOpenGLWidget::createTestData()
     m_renderer->AddViewProp(slice);
     m_style->SetImageSlice(slice);
 
-    double position[3] = { 0 };
-    double newPosition[3];
-    double normal[3] = {
-        directionMatrix->GetElement(0, 2),
-        directionMatrix->GetElement(1, 2),
-        directionMatrix->GetElement(2, 2),
-    };
-    vtkMath::Add(middlePoint, normal, newPosition);
+    double destPositionVector[3];
+    vtkNew<vtkTransform> destPositionTransform;
+    destPositionTransform->RotateY(180);
+    destPositionTransform->TransformVector(planeNormal, destPositionVector);
+
+    std::cout<<"destPositionVector[0] = "<<destPositionVector[0]<<", destPositionVector[1] = "<<destPositionVector[1]<<", destPositionVector[2] = "<<destPositionVector[2]<<endl;
+
+    vtkMath::Add(middlePoint, destPositionVector, newPosition);
+
+    double viewUpVector[3] = { 0 };
+    vtkNew<vtkTransform> normalTransform;
+    normalTransform->RotateX(180);
+    normalTransform->TransformVector(verticalNormal, viewUpVector);
+
     m_renderer->GetActiveCamera()->SetFocalPoint(middlePoint);
-    m_renderer->GetActiveCamera()->SetViewUp(verticalNormal);
+    m_renderer->GetActiveCamera()->SetViewUp(viewUpVector);
     m_renderer->GetActiveCamera()->SetPosition(newPosition);
     m_renderer->ResetCamera(slice->GetBounds());
     #endif
