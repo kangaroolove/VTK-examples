@@ -291,7 +291,7 @@ void VTKOpenGLWidget::createTestData()
 
     double destPositionVector[3];
     vtkNew<vtkTransform> destPositionTransform;
-    destPositionTransform->RotateY(180);
+    destPositionTransform->RotateWXYZ(180, verticalNormal);
     destPositionTransform->TransformVector(planeNormal, destPositionVector);
 
     std::cout<<"destPositionVector[0] = "<<destPositionVector[0]<<", destPositionVector[1] = "<<destPositionVector[1]<<", destPositionVector[2] = "<<destPositionVector[2]<<endl;
@@ -299,9 +299,12 @@ void VTKOpenGLWidget::createTestData()
     vtkMath::Add(middlePoint, destPositionVector, newPosition);
 
     double viewUpVector[3] = { 0 };
-    vtkNew<vtkTransform> normalTransform;
-    normalTransform->RotateX(180);
-    normalTransform->TransformVector(verticalNormal, viewUpVector);
+    vtkNew<vtkTransform> viewUpTransform;
+    viewUpTransform->RotateWXYZ(180, horizontalNormal);
+    viewUpTransform->TransformVector(verticalNormal, viewUpVector);
+
+
+
 
     m_renderer->GetActiveCamera()->SetFocalPoint(middlePoint);
     m_renderer->GetActiveCamera()->SetViewUp(viewUpVector);
