@@ -6,6 +6,8 @@
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
 class KeyPressInteractorStyle;
+class vtkImageData;
+class vtkMatrix4x4;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget
 {
@@ -16,6 +18,11 @@ public:
 private:
     void initialize();
     void createTestData();
+
+    void calculateWorldPositionFromImageIJK(vtkImageData *image, vtkMatrix4x4* directionMatrix, int in[3], double out[3]);
+    void calculateImageIJKFromWorldPosition(vtkImageData* image, vtkMatrix4x4* directionMatrix, double in[3], int out[3]);
+
+    void printArray(const std::string& name, double array[3]);
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;

@@ -89,6 +89,18 @@ public:
         vtkInteractorStyleTrackballCamera::OnKeyPress();
     }
 
+    void OnMouseWheelForward()
+    {
+        qDebug()<<"OnMouseWheelForward";
+        vtkInteractorStyleTrackballCamera::OnMouseWheelForward();
+    }
+
+    void OnMouseWheelBackward()
+    {
+        qDebug()<<"OnMouseWheelBackward";
+        vtkInteractorStyleTrackballCamera::OnMouseWheelBackward();
+    }
+
     void SetImageSlice(vtkImageSlice *slice)
     {
         mImageSlice = slice;
@@ -199,14 +211,6 @@ void VTKOpenGLWidget::createTestData()
     filter->SetInput(itkReader->GetOutput());
     filter->Update();
 
-    // Get the VTK image
-    auto image = filter->GetOutput();
-    if (image)
-    {
-        qDebug()<<"converted successfully";
-        //image->Print(std::cout);
-    }
-
     vtkNew<vtkImageReslice> reslice;
     reslice->SetInputData(filter->GetOutput());
     reslice->Update();
@@ -261,17 +265,37 @@ void VTKOpenGLWidget::createTestData()
         directionMatrix->GetElement(2, 2),
     };
 
-    double position[3] = { 0 };
-    double newPosition[3];
-    double bounds[6];
+    double newCameraPosition[3];
     double tempPosition[3] = { 0 };
-    reslice->GetOutput()->GetBounds(bounds);
 
-    double middlePoint[] = {
-        (bounds[0] + bounds[1]) / 2,
-        (bounds[2] + bounds[3]) / 2,
-        (bounds[4] + bounds[5]) / 2,
+    auto image = reslice->GetOutput();
+    int* dimension = image->GetDimensions();
+
+
+    for (int i = 0; i < 3; ++i)
+    {
+        std::cout<<"dimension["<<i<<"] = "<<dimension[i]<<endl;
+    }
+
+    int imageIJK[3] = {
+        dimension[0] / 2,
+        dimension[1] / 2,
+        dimension[2] / 2,
     };
+    double calculateFocalPoint[3] = { 0 };
+    calculateWorldPositionFromImageIJK(image, directionMatrix, imageIJK, calculateFocalPoint);
+    printArray("calculateFocalPoint", calculateFocalPoint);
+
+    int newimageIJK[3] = {
+        imageIJK[0],
+        imageIJK[1],
+        imageIJK[2] + 100,
+    };
+    double otherPosition[3] = { 0 };
+    calculateWorldPositionFromImageIJK(image, directionMatrix, newimageIJK, otherPosition);
+
+    double spacing[3];
+    image->GetSpacing(spacing);
 
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputData(reslice->GetOutput());
@@ -288,27 +312,138 @@ void VTKOpenGLWidget::createTestData()
 
     m_renderer->AddViewProp(slice);
     m_style->SetImageSlice(slice);
+    double sliceBounds[6];
+    slice->GetBounds(sliceBounds);
+    for (int i=0; i<6; i++)
+    std::cout << sliceBounds[i] << ",";
+    std::cout<<std::endl;
+
+    double viewUpVector[3];
+    viewUpVector[0] = -verticalNormal[0];
+    viewUpVector[1] = -verticalNormal[1];
+    viewUpVector[2] = -verticalNormal[2];
 
     double destPositionVector[3];
-    vtkNew<vtkTransform> destPositionTransform;
-    destPositionTransform->RotateWXYZ(180, verticalNormal);
-    destPositionTransform->TransformVector(planeNormal, destPositionVector);
+    destPositionVector[0] = -planeNormal[0];
+    destPositionVector[1] = -planeNormal[1];
+    destPositionVector[2] = -planeNormal[2];
 
-    std::cout<<"destPositionVector[0] = "<<destPositionVector[0]<<", destPositionVector[1] = "<<destPositionVector[1]<<", destPositionVector[2] = "<<destPositionVector[2]<<endl;
+    double bounds[6] = { 0 };
+    image->GetBounds(bounds);
 
-    vtkMath::Add(middlePoint, destPositionVector, newPosition);
+    vtkMath::Add(calculateFocalPoint, destPositionVector, newCameraPosition);
 
-    double viewUpVector[3] = { 0 };
-    vtkNew<vtkTransform> viewUpTransform;
-    viewUpTransform->RotateWXYZ(180, horizontalNormal);
-    viewUpTransform->TransformVector(verticalNormal, viewUpVector);
+    calculateFocalPoint[0] = -4.07826;
+    calculateFocalPoint[0] = 120.702, 
+    calculateFocalPoint[0] = -82.3864;
 
+    newCameraPosition[0] = 6.99082;
+    newCameraPosition[0] = 443.069;
+    newCameraPosition[0] = -646.703;
 
-
-
-    m_renderer->GetActiveCamera()->SetFocalPoint(middlePoint);
+    //m_renderer->ResetCamera();
+    m_renderer->GetActiveCamera()->SetFocalPoint(calculateFocalPoint);
     m_renderer->GetActiveCamera()->SetViewUp(viewUpVector);
-    m_renderer->GetActiveCamera()->SetPosition(newPosition);
-    m_renderer->ResetCamera(slice->GetBounds());
+    m_renderer->GetActiveCamera()->SetPosition(newCameraPosition);
+    // m_renderer->ResetCameraClippingRange();
+    double clippingRange[2];
+    m_renderer->GetActiveCamera()->GetClippingRange(clippingRange);
+    std::cout<<"clippingRange "<<clippingRange[0]<<", "<<clippingRange[1]<<endl;
+    
+
+    double normal[3];
+    vtkMath::Subtract(calculateFocalPoint, newCameraPosition, normal);
+    vtkMath::Normalize(normal);
+    printArray("normal", normal);
+
+    //return;
+    m_renderer->ResetCamera();
+    std::cout << "reset==========================================="<<endl;
+
+    double correctfocalPoint[3] = { 0 };
+    double cameraViewUp[3] = { 0 };
+    double cameraPosition[3] = { 0 };
+    m_renderer->GetActiveCamera()->GetFocalPoint(correctfocalPoint);
+    m_renderer->GetActiveCamera()->GetViewUp(cameraViewUp);
+    m_renderer->GetActiveCamera()->GetPosition(cameraPosition);
+    m_renderer->GetActiveCamera()->GetClippingRange(clippingRange);
+    std::cout<<"clippingRange "<<clippingRange[0]<<", "<<clippingRange[1]<<endl;
+
+    printArray("correctFocalPoint", correctfocalPoint);
+    printArray("correctPositionPoint", cameraPosition);
+
+
+    double focalPointVector[3];
+    vtkMath::Subtract(calculateFocalPoint, correctfocalPoint, focalPointVector);
+    // vtkMath::Normalize(focalPointVector);
+    printArray("FocalPointDifferenceVector", focalPointVector);
+
+    double correctCameraPositionVector[3];
+    vtkMath::Subtract(correctfocalPoint, cameraPosition, correctCameraPositionVector);
+    vtkMath::Normalize(correctCameraPositionVector);
+    printArray("correctCameraPositionVector", correctCameraPositionVector);
     #endif
+}
+
+void VTKOpenGLWidget::calculateWorldPositionFromImageIJK(vtkImageData *image, vtkMatrix4x4 *directionMatrix, int in[3], double out[3])
+{
+    if (!image)
+        return;
+
+    double imageIJK[] = { in[0], in[1], in[2] };
+    double spacing[3];
+    image->GetSpacing(spacing);
+
+    double spacingVector[] = {
+        imageIJK[0] * spacing[0],
+        imageIJK[1] * spacing[1],
+        imageIJK[2] * spacing[2],
+    };
+
+    double origin[3];
+    image->GetOrigin(origin);
+
+    double vector[3];
+    vtkNew<vtkTransform> transform;
+    transform->SetMatrix(directionMatrix);
+    transform->TransformPoint(spacingVector, vector);
+
+    for (int i = 0; i < 3; ++i)
+        out[i] = vector[i] + origin[i];
+}
+
+void VTKOpenGLWidget::calculateImageIJKFromWorldPosition(vtkImageData *image, vtkMatrix4x4 *directionMatrix, double in[3], int out[3])
+{
+    if (!image)
+        return;
+
+    double origin[3];
+    image->GetOrigin(origin);
+
+    double spacing[3];
+    image->GetSpacing(spacing);
+
+    double point[3];
+    point[0] = in[0] - origin[0];
+    point[1] = in[1] - origin[1];
+    point[2] = in[2] - origin[2];
+
+    double vector[3];
+    vtkNew<vtkMatrix4x4> matrix;
+    matrix->DeepCopy(directionMatrix);
+    matrix->Invert();
+    matrix->MultiplyPoint(point, vector);
+
+    vector[0] /= spacing[0];
+    vector[1] /= spacing[1];
+    vector[2] /= spacing[2];
+
+    out[0] = std::round(vector[0]);
+    out[1] = std::round(vector[1]);
+    out[2] = std::round(vector[2]);
+}
+
+void VTKOpenGLWidget::printArray(const std::string &name, double array[3])
+{;
+    std::cout<<name<<" "<<array[0]<<", "<<array[1]<<", "<<array[2]<<endl;
 }
