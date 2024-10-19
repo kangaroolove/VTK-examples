@@ -29,12 +29,14 @@
 #include <vtkImageActor.h>
 #include <vtkAxesActor.h>
 #include <vtkImageProperty.h>
+#include <vtkInteractorStyleImage.h>
+#include <vtkCoordinate.h>
 
-class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
+class KeyPressInteractorStyle : public vtkInteractorStyleImage
 {
 public:
     static KeyPressInteractorStyle *New();
-    vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
+    vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleImage);
 
     virtual void OnKeyPress() override
     {
@@ -85,27 +87,46 @@ public:
         {
         }
 
-        vtkInteractorStyleTrackballCamera::OnKeyPress();
+        vtkInteractorStyleImage::OnKeyPress();
+    }
+
+    void OnMouseMove()
+    {
+        // int eventPosition[2];
+        // this->GetInteractor()->GetEventPosition(eventPosition);
+
+        // this->GetInteractor()->GetPicker()->Pick(eventPosition[0], eventPosition[1], 0, mRenderer);
+        // double picked[3];
+        // this->GetInteractor()->GetPicker()->GetPickPosition(picked);
+        // std::cout<<"Picker "<<picked[0]<<", "<<picked[1]<<", "<<picked[2]<<endl;
+
+        // vtkInteractorStyleImage::OnMouseMove();
+
+        // vtkNew<vtkCoordinate> coordinate;
+        // coordinate->SetCoordinateSystemToDisplay();
+        // coordinate->SetValue(eventPosition[0], eventPosition[1], 0);
+        // double* worldPosition = coordinate->GetComputedWorldValue(mRenderer);
+        // std::cout<<"coordinate "<<worldPosition[0]<<", "<<worldPosition[1]<<", "<<worldPosition[2]<<endl;
     }
 
     void OnMouseWheelForward()
     {
-        qDebug() << "OnMouseWheelForward";
-        auto camera = mRenderer->GetActiveCamera();
-        auto focalPoint = camera->GetFocalPoint();
-        camera->SetFocalPoint(focalPoint[0], focalPoint[1], focalPoint[2] + 3);
-        mRenderWindow->Render();
-        // vtkInteractorStyleTrackballCamera::OnMouseWheelForward();
+        // qDebug() << "OnMouseWheelForward";
+        // auto camera = mRenderer->GetActiveCamera();
+        // auto focalPoint = camera->GetFocalPoint();
+        // camera->SetFocalPoint(focalPoint[0], focalPoint[1], focalPoint[2] + 3);
+        // mRenderWindow->Render();
+        vtkInteractorStyleTrackballCamera::OnMouseWheelForward();
     }
 
     void OnMouseWheelBackward()
     {
-        qDebug() << "OnMouseWheelBackward";
-        auto camera = mRenderer->GetActiveCamera();
-        auto focalPoint = camera->GetFocalPoint();
-        camera->SetFocalPoint(focalPoint[0], focalPoint[1], focalPoint[2] - 3);
-        mRenderWindow->Render();
-        // vtkInteractorStyleTrackballCamera::OnMouseWheelBackward();
+        // qDebug() << "OnMouseWheelBackward";
+        // auto camera = mRenderer->GetActiveCamera();
+        // auto focalPoint = camera->GetFocalPoint();
+        // camera->SetFocalPoint(focalPoint[0], focalPoint[1], focalPoint[2] - 3);
+        // mRenderWindow->Render();
+        vtkInteractorStyleTrackballCamera::OnMouseWheelBackward();
     }
 
     void SetImageSlice(vtkImageSlice *slice)
@@ -153,6 +174,7 @@ void VTKOpenGLWidget::initialize()
     m_renderWindow->AddRenderer(m_renderer);
     SetRenderWindow(m_renderWindow);
     m_renderWindow->GetInteractor()->SetInteractorStyle(m_style);
+
     m_style->SetRenderer(m_renderer);
     m_style->SetRenderWindow(m_renderWindow);
 }
@@ -219,32 +241,7 @@ void VTKOpenGLWidget::createTestData()
     reslice->SetInputData(filter->GetOutput());
     reslice->Update();
     // reslice->GetOutput()->Print(std::cout);
-#if 0
-    vtkNew<vtkImageActor> imageActor;
-    imageActor->SetInputData(reslice->GetOutput());
-    imageActor->GetProperty()->SetColorWindow(level * 2);
-    imageActor->GetProperty()->SetColorLevel(level);
-    //imageActor->SetUserMatrix(matrix);
-    m_renderer->AddViewProp(imageActor);
-    m_style->SetImageActor(imageActor);
 
-    vtkNew<vtkAxesActor> axesActor;
-    m_renderer->AddActor(axesActor);
-
-    double position[3] = {0, 0, 1};
-    double viewUp[3] = { 0, 1, 0};
-    double focalPoint[3] = { 0, 0, 0};
-
-    auto camera = m_renderer->GetActiveCamera();
-    camera->SetPosition(position);
-    camera->SetViewUp(viewUp);
-    camera->SetFocalPoint(focalPoint);
-
-    // vtkNew<vtkTransform> transform;
-    // transform->Concatenate(matrix);
-    //camera->ApplyTransform(imageActorTransform);
-    m_renderer->ResetCamera();
-#else
     // If I don't use this, the application will crash
     vtkNew<vtkTransform> transform;
     transform->SetMatrix(directionMatrix);
@@ -285,24 +282,18 @@ void VTKOpenGLWidget::createTestData()
         dimension[1] / 2,
         dimension[2] / 2,
     };
-    imageIJK[2] = 0;
+    // imageIJK[2] = 0;
     double calculateFocalPoint[3] = {0};
     calculateWorldPositionFromImageIJK(image, directionMatrix, imageIJK, calculateFocalPoint);
     printArray("calculateFocalPoint", calculateFocalPoint);
-
-    int newimageIJK[3] = {
-        imageIJK[0],
-        imageIJK[1],
-        imageIJK[2] + 100,
-    };
-    double otherPosition[3] = {0};
-    calculateWorldPositionFromImageIJK(image, directionMatrix, newimageIJK, otherPosition);
 
     double spacing[3];
     image->GetSpacing(spacing);
 
     double origin[3];
     image->GetOrigin(origin);
+
+    std::cout<<"Origin "<<origin[0]<<", "<<origin[1]<<", "<<origin[2]<<endl;
 
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputData(reslice->GetOutput());
@@ -339,7 +330,7 @@ void VTKOpenGLWidget::createTestData()
     printArray("calculateViewUp", viewUpVector);
 
     double destPositionVector[3];
-    double length = 300;
+    double length = 1;
     destPositionVector[0] = -planeNormal[0] * length;
     destPositionVector[1] = -planeNormal[1] * length;
     destPositionVector[2] = -planeNormal[2] * length;
@@ -349,47 +340,13 @@ void VTKOpenGLWidget::createTestData()
 
     vtkMath::Add(calculateFocalPoint, destPositionVector, newCameraPosition);
 
-    // m_renderer->ResetCamera();
+    m_renderer->GetActiveCamera()->OrthogonalizeViewUp();
+    m_renderer->GetActiveCamera()->ParallelProjectionOn();
+
     m_renderer->GetActiveCamera()->SetFocalPoint(calculateFocalPoint);
     m_renderer->GetActiveCamera()->SetViewUp(viewUpVector);
     m_renderer->GetActiveCamera()->SetPosition(newCameraPosition);
-
-    // m_renderer->ResetCameraClippingRange();
-    double clippingRange[2];
-    // m_renderer->GetActiveCamera()->GetClippingRange(clippingRange);
-    // std::cout<<"clippingRange "<<clippingRange[0]<<", "<<clippingRange[1]<<endl;
-
-    // double normal[3];
-    // vtkMath::Subtract(calculateFocalPoint, newCameraPosition, normal);
-    // vtkMath::Normalize(normal);
-    // printArray("normal", normal);
-    return;
-    m_renderer->ResetCamera();
-    std::cout << "reset===========================================" << endl;
-
-    double correctfocalPoint[3] = {0};
-    double cameraViewUp[3] = {0};
-    double cameraPosition[3] = {0};
-    m_renderer->GetActiveCamera()->GetFocalPoint(correctfocalPoint);
-    m_renderer->GetActiveCamera()->GetViewUp(cameraViewUp);
-    m_renderer->GetActiveCamera()->GetPosition(cameraPosition);
-    // m_renderer->GetActiveCamera()->GetClippingRange(clippingRange);
-    // std::cout<<"clippingRange "<<clippingRange[0]<<", "<<clippingRange[1]<<endl;
-
-    printArray("cameraViewUp", cameraViewUp);
-    printArray("correctFocalPoint", correctfocalPoint);
-    printArray("correctPositionPoint", cameraPosition);
-
-    double focalPointVector[3];
-    vtkMath::Subtract(calculateFocalPoint, correctfocalPoint, focalPointVector);
-    // vtkMath::Normalize(focalPointVector);
-    printArray("FocalPointDifferenceVector", focalPointVector);
-
-    double correctCameraPositionVector[3];
-    vtkMath::Subtract(correctfocalPoint, cameraPosition, correctCameraPositionVector);
-    vtkMath::Normalize(correctCameraPositionVector);
-    printArray("correctCameraPositionVector", correctCameraPositionVector);
-#endif
+    m_renderer->GetActiveCamera()->SetParallelScale(120);
 }
 
 void VTKOpenGLWidget::calculateWorldPositionFromImageIJK(vtkImageData *image, vtkMatrix4x4 *directionMatrix, int in[3], double out[3])
