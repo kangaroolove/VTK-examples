@@ -31,6 +31,9 @@
 #include <vtkImageProperty.h>
 #include <vtkInteractorStyleImage.h>
 #include <vtkCoordinate.h>
+#include <itkVTKImageToImageFilter.h>
+#include <itkImageFileWriter.h>
+#include <itkNiftiImageIO.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleImage
 {
@@ -411,4 +414,34 @@ void VTKOpenGLWidget::printArray(const std::string &name, double array[3])
 {
     ;
     std::cout << name << " " << array[0] << ", " << array[1] << ", " << array[2] << endl;
+}
+
+void VTKOpenGLWidget::saveImage(vtkImageData* image, vtkMatrix4x4* directionMatrix)
+{
+    using ImageType = itk::Image<short, 3>;
+    using VTKImageToImageType = itk::VTKImageToImageFilter<ImageType>;
+    auto vtkImageToImageFilter = VTKImageToImageType::New();
+    vtkImageToImageFilter->SetInput(image);
+    vtkImageToImageFilter->Update();
+
+    auto itkImage = vtkImageToImageFilter->GetOutput();
+
+
+    itk::Matrix<double, 3, 3> itkMatrix;
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            itkMatrix(i, j) = directionMatrix->GetElement(i, j);
+    
+    itkImage->SetDirection(itkMatrix);
+
+    using Writer1Type = itk::ImageFileWriter<ImageType>;
+    std::string fileName = "D:/ttttt.nii.gz";
+    auto niftiIO = itk::NiftiImageIO::New();
+
+    auto writer = Writer1Type::New();
+    writer->SetFileName(fileName.data());
+    writer->SetInput(itkImage);
+    writer->SetImageIO(niftiIO);
+    writer->Update();
 }

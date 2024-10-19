@@ -23,6 +23,7 @@ private:
     void calculateImageIJKFromWorldPosition(vtkImageData* image, vtkMatrix4x4* directionMatrix, double in[3], int out[3]);
 
     void printArray(const std::string& name, double array[3]);
+    void saveImage(vtkImageData* image, vtkMatrix4x4* directionMatrix);
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
