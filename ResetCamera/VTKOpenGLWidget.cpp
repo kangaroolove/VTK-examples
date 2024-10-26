@@ -10,7 +10,6 @@
 #include <vtkImageActor.h>
 #include <vtkImageMapper3D.h>
 #include <vtkImageProperty.h>
-#include <QDebug>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkImageSlice.h>
 #include <vtkImageResliceMapper.h>
@@ -34,6 +33,8 @@
 #include <itkVTKImageToImageFilter.h>
 #include <itkImageFileWriter.h>
 #include <itkNiftiImageIO.h>
+#include <QDebug>
+#include <itkOrientImageFilter.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleImage
 {
@@ -184,7 +185,7 @@ void VTKOpenGLWidget::initialize()
 
 void VTKOpenGLWidget::createTestData()
 {
-    std::string dir = "D:/Standard test-data/Set N - Problematic dicom/CHENKAI/20230324080608/702";
+    std::string dir = "D:/Standard test-data/Set N - Problematic dicom/CHENKAI/20230324080608/501";
     int index = 0;
     double level = 1245;
 
@@ -221,7 +222,26 @@ void VTKOpenGLWidget::createTestData()
     {
     }
 
-    auto direction = itkReader->GetOutput()->GetDirection();
+
+
+	auto itkSpacing = itkReader->GetOutput()->GetSpacing();
+	for (auto value : itkSpacing)
+		qDebug() << "itkSpacing ="<<value<<endl;
+
+
+	auto orientationFilter = itk::OrientImageFilter<ImageType, ImageType>::New();
+	orientationFilter->UseImageDirectionOn();
+	orientationFilter->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
+	orientationFilter->SetInput(itkReader->GetOutput());
+	orientationFilter->Update();
+
+	auto direction = orientationFilter->GetOutput()->GetDirection();
+	auto itkImageData = orientationFilter->GetOutput();
+
+	auto itkSpacing2 = itkImageData->GetSpacing();
+	for (auto value : itkSpacing2)
+		qDebug() << "itkSpacing2 =" << value << endl;
+
 
     // Get direction matrix
     vtkNew<vtkMatrix4x4> directionMatrix;
@@ -237,7 +257,7 @@ void VTKOpenGLWidget::createTestData()
 
     using FilterType = itk::ImageToVTKImageFilter<ImageType>;
     FilterType::Pointer filter = FilterType::New();
-    filter->SetInput(itkReader->GetOutput());
+    filter->SetInput(orientationFilter->GetOutput());
     filter->Update();
 
     vtkNew<vtkImageReslice> reslice;
@@ -297,6 +317,8 @@ void VTKOpenGLWidget::createTestData()
     image->GetOrigin(origin);
 
     std::cout<<"Origin "<<origin[0]<<", "<<origin[1]<<", "<<origin[2]<<endl;
+
+	std::cout << "image spacing " << spacing[0] << ", " << spacing[1] << ", " << spacing[2] << endl;
 
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputData(reslice->GetOutput());
