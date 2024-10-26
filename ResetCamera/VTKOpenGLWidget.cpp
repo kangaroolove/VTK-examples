@@ -222,13 +222,7 @@ void VTKOpenGLWidget::createTestData()
     {
     }
 
-
-
-	auto itkSpacing = itkReader->GetOutput()->GetSpacing();
-	for (auto value : itkSpacing)
-		qDebug() << "itkSpacing ="<<value<<endl;
-
-
+    // convert image orientation because some images are not based on RAI coordinate
 	auto orientationFilter = itk::OrientImageFilter<ImageType, ImageType>::New();
 	orientationFilter->UseImageDirectionOn();
 	orientationFilter->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
@@ -237,11 +231,6 @@ void VTKOpenGLWidget::createTestData()
 
 	auto direction = orientationFilter->GetOutput()->GetDirection();
 	auto itkImageData = orientationFilter->GetOutput();
-
-	auto itkSpacing2 = itkImageData->GetSpacing();
-	for (auto value : itkSpacing2)
-		qDebug() << "itkSpacing2 =" << value << endl;
-
 
     // Get direction matrix
     vtkNew<vtkMatrix4x4> directionMatrix;
@@ -260,17 +249,16 @@ void VTKOpenGLWidget::createTestData()
     filter->SetInput(orientationFilter->GetOutput());
     filter->Update();
 
+    // If I don't use this, the application will crash
     vtkNew<vtkImageReslice> reslice;
     reslice->SetInputData(filter->GetOutput());
     reslice->Update();
     // reslice->GetOutput()->Print(std::cout);
 
-    // If I don't use this, the application will crash
     vtkNew<vtkTransform> transform;
     transform->SetMatrix(directionMatrix);
 
-    std::cout << "directionMatrix = " << *directionMatrix << endl;
-
+    // TRA view
     double verticalNormal[3] = {
         directionMatrix->GetElement(0, 1),
         directionMatrix->GetElement(1, 1),
@@ -289,36 +277,22 @@ void VTKOpenGLWidget::createTestData()
         directionMatrix->GetElement(2, 2),
     };
 
-    double newCameraPosition[3];
-    double tempPosition[3] = {0};
-
     auto image = reslice->GetOutput();
     int *dimension = image->GetDimensions();
 
-    for (int i = 0; i < 3; ++i)
-    {
-        std::cout << "dimension[" << i << "] = " << dimension[i] << endl;
-    }
-
-    int imageIJK[3] = {
+    int centerPointIJK[3] = {
         dimension[0] / 2,
         dimension[1] / 2,
         dimension[2] / 2,
     };
-    // imageIJK[2] = 0;
-    double calculateFocalPoint[3] = {0};
-    calculateWorldPositionFromImageIJK(image, directionMatrix, imageIJK, calculateFocalPoint);
-    printArray("calculateFocalPoint", calculateFocalPoint);
 
-    double spacing[3];
-    image->GetSpacing(spacing);
+    double centerPoint[3] = {0};
+    calculateWorldPositionFromImageIJK(image, directionMatrix, centerPointIJK, centerPoint);
+    printArray("centerPoint", centerPoint);
 
     double origin[3];
     image->GetOrigin(origin);
-
-    std::cout<<"Origin "<<origin[0]<<", "<<origin[1]<<", "<<origin[2]<<endl;
-
-	std::cout << "image spacing " << spacing[0] << ", " << spacing[1] << ", " << spacing[2] << endl;
+    printArray("Origin", origin);
 
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputData(reslice->GetOutput());
@@ -341,36 +315,27 @@ void VTKOpenGLWidget::createTestData()
 
     m_renderer->AddViewProp(slice);
     m_style->SetImageSlice(slice);
-    double sliceBounds[6];
-    slice->GetBounds(sliceBounds);
-    for (int i = 0; i < 6; i++)
-        std::cout << sliceBounds[i] << ",";
-    std::cout << std::endl;
 
     double viewUpVector[3];
     viewUpVector[0] = -verticalNormal[0];
     viewUpVector[1] = -verticalNormal[1];
     viewUpVector[2] = -verticalNormal[2];
-
-    printArray("calculateViewUp", viewUpVector);
+    printArray("viewUpVector", viewUpVector);
 
     double destPositionVector[3];
     double length = 1;
     destPositionVector[0] = -planeNormal[0] * length;
     destPositionVector[1] = -planeNormal[1] * length;
     destPositionVector[2] = -planeNormal[2] * length;
-
-    double bounds[6] = {0};
-    image->GetBounds(bounds);
-
-    vtkMath::Add(calculateFocalPoint, destPositionVector, newCameraPosition);
+    double cameraPosition[3];
+    vtkMath::Add(centerPoint, destPositionVector, cameraPosition);
 
     m_renderer->GetActiveCamera()->OrthogonalizeViewUp();
     m_renderer->GetActiveCamera()->ParallelProjectionOn();
 
-    m_renderer->GetActiveCamera()->SetFocalPoint(calculateFocalPoint);
+    m_renderer->GetActiveCamera()->SetFocalPoint(centerPoint);
     m_renderer->GetActiveCamera()->SetViewUp(viewUpVector);
-    m_renderer->GetActiveCamera()->SetPosition(newCameraPosition);
+    m_renderer->GetActiveCamera()->SetPosition(cameraPosition);
     m_renderer->GetActiveCamera()->SetParallelScale(120);
 }
 
