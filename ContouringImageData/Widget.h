@@ -6,19 +6,19 @@ class QHBoxLayout;
 class QPushButton;
 class QCheckBox;
 
-class Widget : public QWidget
-{
-    Q_OBJECT
+class Widget : public QWidget {
+  Q_OBJECT
 public:
-    Widget(QWidget* parent = nullptr);
+  Widget(QWidget *parent = nullptr);
 private slots:
-    void onBtnSaveImageClicked();
-private:
-    void initGui();
-    QHBoxLayout* getToolButtonLayout();
-    void bindConnections();
+  void onBtnSaveImageClicked();
 
-    VTKOpenGLWidget* m_openGLWidget;
-    QPushButton* m_btnSaveImage;
-    QCheckBox* m_eraseCheckBox;
+private:
+  void initGui();
+  QHBoxLayout *getToolButtonLayout();
+  void bindConnections();
+
+  VTKOpenGLWidget *m_openGLWidget;
+  QPushButton *m_btnSaveImage;
+  QCheckBox *m_eraseCheckBox;
 };
