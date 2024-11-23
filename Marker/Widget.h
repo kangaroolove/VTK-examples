@@ -4,12 +4,11 @@
 
 class VTKOpenGLWidget;
 
-class Widget : public QWidget
-{
+class Widget : public QWidget {
 public:
-    Widget(QWidget* parent = nullptr);
-    ~Widget();
+  Widget(QWidget *parent = nullptr);
+  ~Widget();
 
 private:
-    VTKOpenGLWidget* m_openGLWidget;
+  VTKOpenGLWidget *m_openGLWidget;
 };
