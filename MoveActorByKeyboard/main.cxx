@@ -23,68 +23,52 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkTransform.h>
-#include <vtkCamera.h>
 
-class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
-{
+class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
-    static KeyPressInteractorStyle* New();
-    vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
+  static KeyPressInteractorStyle *New();
+  vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
 
-    virtual void OnKeyPress() override
-    {
-        vtkRenderWindowInteractor* rwi = this->Interactor;
-        std::string key = rwi->GetKeySym();
+  virtual void OnKeyPress() override {
+    vtkRenderWindowInteractor *rwi = this->Interactor;
+    std::string key = rwi->GetKeySym();
 
-        std::cout<<"Pressed "<<key<<endl;
+    std::cout << "Pressed " << key << endl;
 
-        vtkNew<vtkTransform> transform;
-        vtkLinearTransform* userTransform = mConeActor->GetUserTransform();
-        if (key == "Up")
-        {
-            transform->SetInput(userTransform);
-            transform->Translate(0, 1, 0);
-            mConeActor->SetUserTransform(transform);
-        }  
-        else if (key == "Down")
-        {
-            transform->SetInput(userTransform);
-            transform->Translate(0, -1, 0);
-            mConeActor->SetUserTransform(transform);
-        }  
-        else if (key == "Left")
-        {
-            transform->SetInput(userTransform);
-            transform->Translate(-1, 0, 0);
-            mConeActor->SetUserTransform(transform);
-        }
-        else if (key == "Right")
-        {
-            transform->SetInput(userTransform);
-            transform->Translate(1, 0, 0);
-            mConeActor->SetUserTransform(transform);
-        }
-        mRenderWindow->Render();
-
-        vtkInteractorStyleTrackballCamera::OnKeyPress();
+    vtkNew<vtkTransform> transform;
+    vtkLinearTransform *userTransform = mConeActor->GetUserTransform();
+    if (key == "Up") {
+      transform->SetInput(userTransform);
+      transform->Translate(0, 1, 0);
+      mConeActor->SetUserTransform(transform);
+    } else if (key == "Down") {
+      transform->SetInput(userTransform);
+      transform->Translate(0, -1, 0);
+      mConeActor->SetUserTransform(transform);
+    } else if (key == "Left") {
+      transform->SetInput(userTransform);
+      transform->Translate(-1, 0, 0);
+      mConeActor->SetUserTransform(transform);
+    } else if (key == "Right") {
+      transform->SetInput(userTransform);
+      transform->Translate(1, 0, 0);
+      mConeActor->SetUserTransform(transform);
     }
-    void SetConeActor(vtkActor *coneActor)
-    {
-        mConeActor = coneActor;
-    }
+    mRenderWindow->Render();
 
-    void SetRenderWindow(vtkRenderWindow* window)
-    {
-        mRenderWindow = window;
-    }
+    vtkInteractorStyleTrackballCamera::OnKeyPress();
+  }
+  void SetConeActor(vtkActor *coneActor) { mConeActor = coneActor; }
+
+  void SetRenderWindow(vtkRenderWindow *window) { mRenderWindow = window; }
+
 private:
-    vtkActor* mConeActor;
-    vtkRenderWindow* mRenderWindow;
+  vtkActor *mConeActor;
+  vtkRenderWindow *mRenderWindow;
 };
 vtkStandardNewMacro(KeyPressInteractorStyle);
 
-int main(int, char*[])
-{
+int main(int, char *[]) {
   vtkNew<vtkNamedColors> colors;
 
   vtkNew<vtkConeSource> cone;
