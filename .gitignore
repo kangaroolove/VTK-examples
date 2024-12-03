@@ -37,3 +37,7 @@
 /ReadDICOMSeries/build
 /ResetCamera2/.vscode
 /ResetCamera2/build
+/ReadWriteNiiFile/.vscode
+/ReadWriteNiiFile/build
+/WithGraphicsView/.vscode
+/WithGraphicsView/build
