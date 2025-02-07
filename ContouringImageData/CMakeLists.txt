@@ -18,6 +18,7 @@ find_package(VTK COMPONENTS
   vtkInteractionStyle
   vtkImagingStencil
   vtkRenderingImage
+  vtkImagingMorphological
 )
 
 include(${VTK_USE_FILE})

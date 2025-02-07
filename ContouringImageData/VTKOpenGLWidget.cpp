@@ -1,6 +1,7 @@
 #include "VTKOpenGLWidget.h"
 #include <QDebug>
 #include <array>
+#include <queue>
 #include <vtkAbstractPicker.h>
 #include <vtkActor.h>
 #include <vtkActor2D.h>
@@ -18,14 +19,17 @@
 #include <vtkGlyph3D.h>
 #include <vtkImageActor.h>
 #include <vtkImageCanvasSource2D.h>
+#include <vtkImageConnectivityFilter.h>
 #include <vtkImageData.h>
 #include <vtkImageMapper3D.h>
+#include <vtkImageProperty.h>
 #include <vtkImageSliceMapper.h>
 #include <vtkImageStack.h>
 #include <vtkImageStencil.h>
 #include <vtkInteractorStyleImage.h>
 #include <vtkLine.h>
 #include <vtkLinearExtrusionFilter.h>
+#include <vtkLookupTable.h>
 #include <vtkMath.h>
 #include <vtkNIFTIImageWriter.h>
 #include <vtkNamedColors.h>
@@ -277,9 +281,11 @@ public:
     auto pixelBlockIndexWithinRadius = getPixelBlockIndexWithinRadius(
         validAdjacentPixelBlocksIndex, basePoint, m_radius);
     for (auto &index : pixelBlockIndexWithinRadius) {
-      double color = m_eraseOn ? 0 : 255.0;
+      double color = m_eraseOn ? 0 : 1.0;
       m_contouringImage->SetScalarComponentFromDouble(index.first, index.second,
                                                       imageK, 0, color);
+
+      // qDebug() << "x = " << index.first << ", y = " << index.second;
     }
 
     m_contouringImage->Modified();
@@ -351,8 +357,17 @@ void VTKOpenGLWidget::createTestData() {
 
   m_baseImage = source;
 
+  vtkNew<vtkLookupTable> lookupTable;
+  lookupTable->SetHueRange(18.0 / 360.0, 18.0 / 360.0);
+  lookupTable->SetSaturationRange(0.3333, 0.3333);
+  lookupTable->SetValueRange(0, 0.9412);
+  lookupTable->SetAlphaRange(1, 1);
+  lookupTable->Build();
+
   vtkNew<vtkImageActor> imageActor;
   imageActor->SetInputData(source);
+  imageActor->GetProperty()->UseLookupTableScalarRangeOn();
+  imageActor->GetProperty()->SetLookupTable(lookupTable);
   m_renderer->AddViewProp(imageActor);
 
   m_interactorStyle->initContouringCursor();
@@ -364,6 +379,98 @@ void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color) {
   for (vtkIdType i = 0; i < count; ++i)
     image->GetPointData()->GetScalars()->SetTuple1(i, color);
 }
+
+void VTKOpenGLWidget::autoFill() {
+  if (!m_baseImage)
+    return;
+
+  vtkNew<vtkImageConnectivityFilter> connectivity;
+  connectivity->SetInputData(m_baseImage);
+  connectivity->SetScalarRange(1, 1);
+  connectivity->SetExtractionModeToAllRegions();
+  connectivity->GenerateRegionExtentsOn();
+  connectivity->Update();
+
+  auto regionNum = connectivity->GetNumberOfExtractedRegions();
+  qDebug() << "regionNum = " << regionNum;
+  if (regionNum == 0)
+    return;
+
+  auto extentArray = connectivity->GetExtractedRegionExtents();
+  if (!connectivity->GetGenerateRegionExtents())
+    return;
+
+  std::array<int, 6> imageExtent;
+  m_baseImage->GetExtent(imageExtent.data());
+
+  const int EXTENT_SIZE = 6;
+  std::array<int, EXTENT_SIZE> holeExtent;
+  for (int i = 0; i < regionNum; ++i) {
+    holeExtent[0] = extentArray->GetValue(EXTENT_SIZE * i);
+    holeExtent[1] = extentArray->GetValue(EXTENT_SIZE * i + 1);
+    holeExtent[2] = extentArray->GetValue(EXTENT_SIZE * i + 2);
+    holeExtent[3] = extentArray->GetValue(EXTENT_SIZE * i + 3);
+    holeExtent[4] = extentArray->GetValue(EXTENT_SIZE * i + 4);
+    holeExtent[5] = extentArray->GetValue(EXTENT_SIZE * i + 5);
+
+    int maxHoleExtentX = holeExtent[1];
+    int minHoleExtentX = holeExtent[0];
+    int maxHoleExtentY = holeExtent[3];
+    int minHoleExtentY = holeExtent[2];
+
+    int centerExtentX = (maxHoleExtentX - minHoleExtentX) / 2 + minHoleExtentX;
+    int centerExtentY = (maxHoleExtentY - minHoleExtentY) / 2 + minHoleExtentY;
+
+    std::vector<std::vector<bool>> visited(
+        imageExtent[3], std::vector<bool>(imageExtent[1], false));
+
+    std::queue<std::pair<int, int>> q;
+
+    visited[centerExtentX][centerExtentY] = true;
+    q.push({centerExtentX, centerExtentY});
+
+    std::vector<std::pair<int, int>> direction = {
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+    bool result = true;
+    while (!q.empty()) {
+      std::pair<int, int> current = q.front();
+      q.pop();
+
+      for (auto &dir : direction) {
+        int x = current.first + dir.first;
+        int y = current.second + dir.second;
+
+        auto color =
+            m_baseImage->GetScalarComponentAsDouble(x, y, holeExtent[4], 0);
+
+        if (color == 0.0 && (x >= maxHoleExtentX || y >= maxHoleExtentY ||
+                             x <= minHoleExtentX || y <= minHoleExtentY)) {
+          result = false;
+          break;
+        } else if (color == 0.0 && !visited[x][y]) {
+          visited[x][y] = true;
+          q.push({x, y});
+        }
+      }
+    }
+
+    if (result) {
+      qDebug() << "There is a hole";
+    } else {
+      qDebug() << "There is no hole!";
+    }
+
+    // for (int j = holeExtent[0]; j < holeExtent[1]; ++j) {
+    //   for (int k = holeExtent[2]; k < holeExtent[3]; ++k) {
+    //     m_baseImage->SetScalarComponentFromDouble(j, k, holeExtent[4],
+    //     0, 1.0);
+    //   }
+    // }
+  }
+}
+
+void VTKOpenGLWidget::BFS(int extentX, int extentY) {}
 
 std::vector<std::pair<int, int>>
 InteractorStyleImage::calculatePixelBlockList(const double &radius) {

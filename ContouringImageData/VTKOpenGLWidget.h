@@ -21,6 +21,8 @@ private:
   void initialize();
   void createTestData();
   void initColor(vtkImageData *image, const int &color);
+  void autoFill();
+  void BFS(int extentX, int extentY);
 
   vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
   vtkSmartPointer<vtkRenderer> m_renderer;
