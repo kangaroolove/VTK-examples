@@ -380,9 +380,9 @@ void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color) {
     image->GetPointData()->GetScalars()->SetTuple1(i, color);
 }
 
-void VTKOpenGLWidget::autoFill() {
-  if (!m_baseImage)
-    return;
+std::vector<std::array<int, 6>> VTKOpenGLWidget::detectImageHole() {
+  const int EXTENT_SIZE = 6;
+  std::vector<std::array<int, EXTENT_SIZE>> list;
 
   vtkNew<vtkImageConnectivityFilter> connectivity;
   connectivity->SetInputData(m_baseImage);
@@ -391,28 +391,35 @@ void VTKOpenGLWidget::autoFill() {
   connectivity->GenerateRegionExtentsOn();
   connectivity->Update();
 
-  auto regionNum = connectivity->GetNumberOfExtractedRegions();
-  qDebug() << "regionNum = " << regionNum;
-  if (regionNum == 0)
-    return;
-
+  auto num = connectivity->GetNumberOfExtractedRegions();
   auto extentArray = connectivity->GetExtractedRegionExtents();
-  if (!connectivity->GetGenerateRegionExtents())
-    return;
 
-  std::array<int, 6> imageExtent;
-  m_baseImage->GetExtent(imageExtent.data());
-
-  const int EXTENT_SIZE = 6;
   std::array<int, EXTENT_SIZE> holeExtent;
-  for (int i = 0; i < regionNum; ++i) {
+  for (int i = 0; i < num; ++i) {
     holeExtent[0] = extentArray->GetValue(EXTENT_SIZE * i);
     holeExtent[1] = extentArray->GetValue(EXTENT_SIZE * i + 1);
     holeExtent[2] = extentArray->GetValue(EXTENT_SIZE * i + 2);
     holeExtent[3] = extentArray->GetValue(EXTENT_SIZE * i + 3);
     holeExtent[4] = extentArray->GetValue(EXTENT_SIZE * i + 4);
     holeExtent[5] = extentArray->GetValue(EXTENT_SIZE * i + 5);
+    list.push_back(holeExtent);
+  }
 
+  return list;
+}
+
+void VTKOpenGLWidget::autoFill() {
+  if (!m_baseImage)
+    return;
+
+  auto imageHoleList = detectImageHole();
+  if (imageHoleList.empty())
+    return;
+
+  std::array<int, 6> imageExtent;
+  m_baseImage->GetExtent(imageExtent.data());
+
+  for (auto &holeExtent : imageHoleList) {
     int maxHoleExtentX = holeExtent[1];
     int minHoleExtentX = holeExtent[0];
     int maxHoleExtentY = holeExtent[3];
@@ -423,10 +430,8 @@ void VTKOpenGLWidget::autoFill() {
 
     std::vector<std::vector<bool>> visited(
         imageExtent[3], std::vector<bool>(imageExtent[1], false));
-
-    std::queue<std::pair<int, int>> q;
-
     std::vector<std::pair<int, int>> toDrawArea;
+    std::queue<std::pair<int, int>> q;
 
     visited[centerExtentX][centerExtentY] = true;
     q.push({centerExtentX, centerExtentY});
@@ -460,20 +465,14 @@ void VTKOpenGLWidget::autoFill() {
     }
 
     if (result && toDrawArea.size() > 1) {
-      qDebug() << "There is a hole";
-
       qDebug() << toDrawArea.size();
       for (auto &item : toDrawArea) {
         m_baseImage->SetScalarComponentFromDouble(item.first, item.second,
                                                   holeExtent[4], 0, 1.0);
       }
       m_baseImage->Modified();
-
-    } else {
-      qDebug() << "There is no hole!";
     }
   }
-
   m_renderWindow->Render();
 }
 
