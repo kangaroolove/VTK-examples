@@ -426,8 +426,11 @@ void VTKOpenGLWidget::autoFill() {
 
     std::queue<std::pair<int, int>> q;
 
+    std::vector<std::pair<int, int>> toDrawArea;
+
     visited[centerExtentX][centerExtentY] = true;
     q.push({centerExtentX, centerExtentY});
+    toDrawArea.push_back({centerExtentX, centerExtentY});
 
     std::vector<std::pair<int, int>> direction = {
         {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
@@ -451,23 +454,26 @@ void VTKOpenGLWidget::autoFill() {
         } else if (color == 0.0 && !visited[x][y]) {
           visited[x][y] = true;
           q.push({x, y});
+          toDrawArea.push_back({x, y});
         }
       }
     }
 
     if (result) {
       qDebug() << "There is a hole";
+
+      for (auto &item : toDrawArea) {
+        m_baseImage->SetScalarComponentFromDouble(item.first, item.second,
+                                                  holeExtent[4], 0, 1.0);
+      }
+      m_baseImage->Modified();
+
     } else {
       qDebug() << "There is no hole!";
     }
-
-    // for (int j = holeExtent[0]; j < holeExtent[1]; ++j) {
-    //   for (int k = holeExtent[2]; k < holeExtent[3]; ++k) {
-    //     m_baseImage->SetScalarComponentFromDouble(j, k, holeExtent[4],
-    //     0, 1.0);
-    //   }
-    // }
   }
+
+  m_renderWindow->Render();
 }
 
 void VTKOpenGLWidget::BFS(int extentX, int extentY) {}
