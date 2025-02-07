@@ -16,12 +16,12 @@ public:
   VTKOpenGLWidget(QWidget *parent = nullptr);
   void saveImageToLocal();
   void setEraseOn(bool on);
+  void autoFill();
 
 private:
   void initialize();
   void createTestData();
   void initColor(vtkImageData *image, const int &color);
-  void autoFill();
   void BFS(int extentX, int extentY);
 
   vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;

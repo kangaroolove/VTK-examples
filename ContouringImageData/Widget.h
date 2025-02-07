@@ -12,6 +12,7 @@ public:
   Widget(QWidget *parent = nullptr);
 private slots:
   void onBtnSaveImageClicked();
+  void onBtnAutoFillClicked();
 
 private:
   void initGui();
@@ -21,4 +22,5 @@ private:
   VTKOpenGLWidget *m_openGLWidget;
   QPushButton *m_btnSaveImage;
   QCheckBox *m_eraseCheckBox;
+  QPushButton *m_btnAutoFill;
 };
