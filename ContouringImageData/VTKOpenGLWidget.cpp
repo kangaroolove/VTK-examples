@@ -459,9 +459,10 @@ void VTKOpenGLWidget::autoFill() {
       }
     }
 
-    if (result) {
+    if (result && toDrawArea.size() > 1) {
       qDebug() << "There is a hole";
 
+      qDebug() << toDrawArea.size();
       for (auto &item : toDrawArea) {
         m_baseImage->SetScalarComponentFromDouble(item.first, item.second,
                                                   holeExtent[4], 0, 1.0);
@@ -475,8 +476,6 @@ void VTKOpenGLWidget::autoFill() {
 
   m_renderWindow->Render();
 }
-
-void VTKOpenGLWidget::BFS(int extentX, int extentY) {}
 
 std::vector<std::pair<int, int>>
 InteractorStyleImage::calculatePixelBlockList(const double &radius) {
