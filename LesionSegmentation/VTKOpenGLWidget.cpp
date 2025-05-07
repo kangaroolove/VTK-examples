@@ -28,6 +28,7 @@
 #include <vtkTransformFilter.h>
 #include <itkNiftiImageIO.h>
 #include <itkImageFileReader.h>
+#include <vtkImageConnectivityFilter.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -147,12 +148,46 @@ void VTKOpenGLWidget::createTestData() {
     // image->Print(std::cout);
   }
 
+  vtkNew<vtkImageConnectivityFilter> connectivityFilter;
+  connectivityFilter->SetInputData(image);
+  connectivityFilter->SetScalarRange(1, 1);
+  connectivityFilter->SetExtractionModeToAllRegions();
+  connectivityFilter->GenerateRegionExtentsOn();
+  connectivityFilter->Update();
+
+  const int EXTENT_SIZE = 6;
+
+vtkIdTypeArray* sizeArray = connectivityFilter->GetExtractedRegionSizes();
+    vtkIdTypeArray* idArray = connectivityFilter->GetExtractedRegionSeedIds();
+    vtkIdTypeArray* labelArray = connectivityFilter->GetExtractedRegionLabels();
+    vtkIntArray* extentArray = connectivityFilter->GetExtractedRegionExtents();
+    vtkIdType rn = connectivityFilter->GetNumberOfExtractedRegions();
+    std::cout << "number of regions: " << rn << std::endl;
+    for (vtkIdType r = 0; r < rn; r++)
+    {
+      std::cout << "region: " << r << ","
+                << " seed: " << idArray->GetValue(r) << ","
+                << " label: " << labelArray->GetValue(r) << ","
+                << " size: " << sizeArray->GetValue(r) << ","
+                << " extent: [";
+      if (connectivityFilter->GetGenerateRegionExtents())
+      {
+        std::cout << extentArray->GetValue(6 * r) << "," << extentArray->GetValue(6 * r + 1) << ","
+                  << extentArray->GetValue(6 * r + 2) << "," << extentArray->GetValue(6 * r + 3)
+                  << "," << extentArray->GetValue(6 * r + 4) << ","
+                  << extentArray->GetValue(6 * r + 5);
+      }
+      std::cout << "]" << std::endl;
+    }
+
+
+
 
   vtkNew<vtkImageReslice> reslice;
   reslice->SetInputData(filter->GetOutput());
   reslice->Update();
 
-  reslice->GetOutput()->Print(std::cout);
+  //reslice->GetOutput()->Print(std::cout);
 
   vtkNew<vtkTransform> transform;
   transform->SetMatrix(matrix);
