@@ -1,0 +1,48 @@
+{
+    "cmake.debugConfig": {
+        "visualizerFile": "D:/work/qt5.natvis.xml"
+    },
+    "cmake.configureArgs": [
+        "-DVTK_DIR=D:/work/ultrast/libs/VTK/x64/lib/cmake/vtk-8.2",
+        "-DQt5_DIR=D:/Qt/Qt5.12.10/5.12.10/msvc2015_64/lib/cmake/Qt5",
+        "-DITK_DIR=D:/work/ultrast/libs//ITK/x64/lib/cmake/ITK-5.1"
+    ],
+    "files.associations": {
+        "chrono": "cpp",
+        "exception": "cpp",
+        "fstream": "cpp",
+        "functional": "cpp",
+        "initializer_list": "cpp",
+        "ios": "cpp",
+        "iosfwd": "cpp",
+        "iostream": "cpp",
+        "istream": "cpp",
+        "iterator": "cpp",
+        "limits": "cpp",
+        "list": "cpp",
+        "map": "cpp",
+        "ostream": "cpp",
+        "set": "cpp",
+        "stdexcept": "cpp",
+        "streambuf": "cpp",
+        "system_error": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "typeinfo": "cpp",
+        "vector": "cpp",
+        "xfacet": "cpp",
+        "xfunctional": "cpp",
+        "xiosbase": "cpp",
+        "xlocale": "cpp",
+        "xlocinfo": "cpp",
+        "xlocmon": "cpp",
+        "xlocnum": "cpp",
+        "xloctime": "cpp",
+        "xmemory": "cpp",
+        "xmemory0": "cpp",
+        "xstring": "cpp",
+        "xtree": "cpp",
+        "xutility": "cpp",
+        "array": "cpp"
+    },
+}
