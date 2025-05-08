@@ -29,6 +29,9 @@
 #include <itkNiftiImageIO.h>
 #include <itkImageFileReader.h>
 #include <vtkImageConnectivityFilter.h>
+#include <vtkImageThreshold.h>
+#include <vtkImageThresholdConnectivity.h>
+#include <vtkNIFTIImageWriter.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -157,11 +160,18 @@ void VTKOpenGLWidget::createTestData() {
 
   const int EXTENT_SIZE = 6;
 
+
+
+
 vtkIdTypeArray* sizeArray = connectivityFilter->GetExtractedRegionSizes();
     vtkIdTypeArray* idArray = connectivityFilter->GetExtractedRegionSeedIds();
     vtkIdTypeArray* labelArray = connectivityFilter->GetExtractedRegionLabels();
     vtkIntArray* extentArray = connectivityFilter->GetExtractedRegionExtents();
     vtkIdType rn = connectivityFilter->GetNumberOfExtractedRegions();
+
+
+    
+
     std::cout << "number of regions: " << rn << std::endl;
     for (vtkIdType r = 0; r < rn; r++)
     {
@@ -170,12 +180,45 @@ vtkIdTypeArray* sizeArray = connectivityFilter->GetExtractedRegionSizes();
                 << " label: " << labelArray->GetValue(r) << ","
                 << " size: " << sizeArray->GetValue(r) << ","
                 << " extent: [";
+
+
+      std::array<int, 6> region;
       if (connectivityFilter->GetGenerateRegionExtents())
       {
         std::cout << extentArray->GetValue(6 * r) << "," << extentArray->GetValue(6 * r + 1) << ","
                   << extentArray->GetValue(6 * r + 2) << "," << extentArray->GetValue(6 * r + 3)
                   << "," << extentArray->GetValue(6 * r + 4) << ","
-                  << extentArray->GetValue(6 * r + 5);
+                  << extentArray->GetValue(6 * r + 5)<<endl;
+
+
+        region[0] = extentArray->GetValue(6 * r);
+        region[1] = extentArray->GetValue(6 * r + 1);
+        region[2] = extentArray->GetValue(6 * r + 2);
+        region[3] = extentArray->GetValue(6 * r + 3);
+        region[4] = extentArray->GetValue(6 * r + 4);
+        region[5] = extentArray->GetValue(6 * r + 5);
+
+        vtkNew<vtkImageData> blackImage;
+        blackImage->DeepCopy(image);
+
+        vtkNew<vtkImageThreshold> imageThreshold;
+        imageThreshold->SetInputData(blackImage);
+        imageThreshold->ThresholdBetween(1, 1);
+        imageThreshold->ReplaceInOn();
+        imageThreshold->SetInValue(0);
+        imageThreshold->Update();
+
+        auto dest = imageThreshold->GetOutput();
+        for (int i = region[0]; i < region[1]; ++i)
+          for (int j = region[2]; j < region[3]; ++j)
+            for (int k = region[4]; k < region[5]; ++k)
+              dest->SetScalarComponentFromFloat(i, j, k, 0, 1.0);
+
+        vtkNew<vtkNIFTIImageWriter> writer;
+        writer->SetInputData(dest);
+        writer->SetFileName(QString("D:/LesionSegmentation_%1.nii.gz").arg(r).toStdString().data());
+        writer->Update();
+
       }
       std::cout << "]" << std::endl;
     }
