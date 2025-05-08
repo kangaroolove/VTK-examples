@@ -6,6 +6,8 @@
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
 class KeyPressInteractorStyle;
+class vtkImageData;
+class vtkMatrix4x4;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
 public:
@@ -15,6 +17,8 @@ public:
 private:
   void initialize();
   void createTestData();
+  void saveImage(vtkImageData *image,
+                                vtkMatrix4x4 *directionMatrix, const QString& fileName);
 
   vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
   vtkSmartPointer<vtkRenderer> m_renderer;

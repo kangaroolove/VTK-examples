@@ -31,7 +31,9 @@
 #include <vtkImageConnectivityFilter.h>
 #include <vtkImageThreshold.h>
 #include <vtkImageThresholdConnectivity.h>
+#include <itkVTKImageToImageFilter.h>
 #include <vtkNIFTIImageWriter.h>
+#include <itkImageFileWriter.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -198,27 +200,25 @@ vtkIdTypeArray* sizeArray = connectivityFilter->GetExtractedRegionSizes();
         region[4] = extentArray->GetValue(6 * r + 4);
         region[5] = extentArray->GetValue(6 * r + 5);
 
-        vtkNew<vtkImageData> blackImage;
-        blackImage->DeepCopy(image);
+        vtkNew<vtkImageData> copyImage;
+        copyImage->DeepCopy(image);
 
-        vtkNew<vtkImageThreshold> imageThreshold;
-        imageThreshold->SetInputData(blackImage);
-        imageThreshold->ThresholdBetween(1, 1);
-        imageThreshold->ReplaceInOn();
-        imageThreshold->SetInValue(0);
-        imageThreshold->Update();
+        std::array<int, 6> extent;
+        copyImage->GetExtent(extent.data());
 
-        auto dest = imageThreshold->GetOutput();
-        for (int i = region[0]; i < region[1]; ++i)
-          for (int j = region[2]; j < region[3]; ++j)
-            for (int k = region[4]; k < region[5]; ++k)
-              dest->SetScalarComponentFromFloat(i, j, k, 0, 1.0);
+        for (int i = extent[0]; i < extent[1]; ++i)
+          for (int j = extent[2]; j < extent[3]; ++j)
+            for (int k = extent[4]; k < extent[5]; ++k)
 
-        vtkNew<vtkNIFTIImageWriter> writer;
-        writer->SetInputData(dest);
-        writer->SetFileName(QString("D:/LesionSegmentation_%1.nii.gz").arg(r).toStdString().data());
-        writer->Update();
+      {
 
+          bool readyToPaintArea = (i < region[0] || i > region[1] || j < region[2] || j > region[3] || k < region[4] || k > region[5]);
+          bool isBlackPixel = copyImage->GetScalarComponentAsDouble(i, j, k, 0) == 0;
+          if (readyToPaintArea && !isBlackPixel)
+              copyImage->SetScalarComponentFromDouble(i, j, k, 0, 0.0);
+
+      }
+        saveImage(copyImage, matrix, QString("D:/lesionSegmentation_%1.nii.gz").arg(r));
       }
       std::cout << "]" << std::endl;
     }
@@ -258,3 +258,31 @@ vtkIdTypeArray* sizeArray = connectivityFilter->GetExtractedRegionSizes();
   m_renderer->GetActiveCamera()->ApplyTransform(transform);
   m_renderer->ResetCamera();
 }
+
+void VTKOpenGLWidget::saveImage(vtkImageData *image,
+                                vtkMatrix4x4 *directionMatrix, const QString& fileName) {
+        using ImageType = itk::Image<short, 3>;
+  using VTKImageToImageType = itk::VTKImageToImageFilter<ImageType>;
+  auto vtkImageToImageFilter = VTKImageToImageType::New();
+  vtkImageToImageFilter->SetInput(image);
+  vtkImageToImageFilter->Update();
+
+  auto itkImage = vtkImageToImageFilter->GetOutput();
+
+  itk::Matrix<double, 3, 3> itkMatrix;
+
+  for (int i = 0; i < 3; ++i)
+    for (int j = 0; j < 3; ++j)
+      itkMatrix(i, j) = directionMatrix->GetElement(i, j);
+
+  itkImage->SetDirection(itkMatrix);
+
+  using Writer1Type = itk::ImageFileWriter<ImageType>;
+  auto niftiIO = itk::NiftiImageIO::New();
+
+  auto writer = Writer1Type::New();
+  writer->SetFileName(fileName.toStdString().data());
+  writer->SetInput(itkImage);
+  writer->SetImageIO(niftiIO);
+  writer->Update(); 
+                       }
