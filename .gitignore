@@ -43,3 +43,5 @@
 /WithGraphicsView/build
 /LesionSegmentation/build
 /LesionSegmentation/.vscode
+/ImageThreshold/.vscode
+/ImageThreshold/build
