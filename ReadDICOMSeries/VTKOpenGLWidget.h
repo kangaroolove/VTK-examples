@@ -9,14 +9,14 @@ class KeyPressInteractorStyle;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
 public:
-  VTKOpenGLWidget(QWidget *parent = nullptr);
-  ~VTKOpenGLWidget();
+    VTKOpenGLWidget(QWidget *parent = nullptr);
+    ~VTKOpenGLWidget();
 
 private:
-  void initialize();
-  void createTestData();
+    void initialize();
+    void createTestData();
 
-  vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
-  vtkSmartPointer<vtkRenderer> m_renderer;
-  vtkSmartPointer<KeyPressInteractorStyle> m_style;
+    vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
+    vtkSmartPointer<vtkRenderer> m_renderer;
+    vtkSmartPointer<KeyPressInteractorStyle> m_style;
 };
