@@ -11,15 +11,15 @@ class vtkMatrix4x4;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
 public:
-  VTKOpenGLWidget(QWidget *parent = nullptr);
-  ~VTKOpenGLWidget();
+    VTKOpenGLWidget(QWidget *parent = nullptr);
+    ~VTKOpenGLWidget();
 
 private:
-  void initialize();
-  void createTestData();
-  void saveImage(vtkImageData *image, vtkMatrix4x4 *directionMatrix);
+    void initialize();
+    void createTestData();
+    void saveImage(vtkImageData *image, vtkMatrix4x4 *directionMatrix);
 
-  vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
-  vtkSmartPointer<vtkRenderer> m_renderer;
-  vtkSmartPointer<KeyPressInteractorStyle> m_style;
+    vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
+    vtkSmartPointer<vtkRenderer> m_renderer;
+    vtkSmartPointer<KeyPressInteractorStyle> m_style;
 };

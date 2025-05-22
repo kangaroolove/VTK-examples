@@ -37,40 +37,38 @@ public:
   vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
 
   virtual void OnKeyPress() override {
-    vtkRenderWindowInteractor *rwi = this->Interactor;
-    std::string key = rwi->GetKeySym();
+      vtkRenderWindowInteractor *rwi = this->Interactor;
+      std::string key = rwi->GetKeySym();
 
-    std::cout << "Pressed " << key << endl;
-    if (key == "Up") {
-      // double bounds[6];
-      // mImageActor->GetBounds(bounds);
-      // for (int i = 0; i < 6; i++)
-      // {
-      //     qDebug()<<"bounds["<<i<<"] = "<<bounds[i];
-      // }
-    } else if (key == "Down") {
-      double bounds[6];
-      mImageSlice->GetBounds(bounds);
-      for (int i = 0; i < 6; i++) {
-        qDebug() << "bounds[" << i << "] = " << bounds[i];
+      std::cout << "Pressed " << key << endl;
+      if (key == "Up") {
+          // double bounds[6];
+          // mImageActor->GetBounds(bounds);
+          // for (int i = 0; i < 6; i++)
+          // {
+          //     qDebug()<<"bounds["<<i<<"] = "<<bounds[i];
+          // }
+      } else if (key == "Down") {
+          double bounds[6];
+          mImageSlice->GetBounds(bounds);
+          for (int i = 0; i < 6; i++) {
+              qDebug() << "bounds[" << i << "] = " << bounds[i];
+          }
+      } else if (key == "Left") {
+          auto camera = mRenderer->GetActiveCamera();
+          double position[3];
+          camera->GetPosition(position);
+          qDebug() << "Camera position";
+          for (int i = 0; i < 3; ++i) qDebug() << position[i];
+
+          double focalPoint[3];
+          camera->GetFocalPoint(focalPoint);
+          qDebug() << "Camera focalPoint";
+          for (int i = 0; i < 3; ++i) qDebug() << focalPoint[i];
+      } else if (key == "Right") {
       }
-    } else if (key == "Left") {
-      auto camera = mRenderer->GetActiveCamera();
-      double position[3];
-      camera->GetPosition(position);
-      qDebug() << "Camera position";
-      for (int i = 0; i < 3; ++i)
-        qDebug() << position[i];
 
-      double focalPoint[3];
-      camera->GetFocalPoint(focalPoint);
-      qDebug() << "Camera focalPoint";
-      for (int i = 0; i < 3; ++i)
-        qDebug() << focalPoint[i];
-    } else if (key == "Right") {
-    }
-
-    vtkInteractorStyleTrackballCamera::OnKeyPress();
+      vtkInteractorStyleTrackballCamera::OnKeyPress();
   }
 
   void SetImageSlice(vtkImageSlice *slice) { mImageSlice = slice; }
@@ -79,7 +77,7 @@ public:
 
   void SetRenderer(vtkRenderer *renderer) { mRenderer = renderer; }
 
-private:
+  private:
   vtkImageActor *mImageActor;
   vtkImageSlice *mImageSlice;
   vtkRenderWindow *mRenderWindow;
@@ -92,8 +90,8 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
       m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New()),
       m_renderer(vtkSmartPointer<vtkRenderer>::New()),
       m_style(vtkSmartPointer<KeyPressInteractorStyle>::New()) {
-  initialize();
-  createTestData();
+    initialize();
+    createTestData();
 }
 
 VTKOpenGLWidget::~VTKOpenGLWidget() {}
@@ -138,7 +136,7 @@ void VTKOpenGLWidget::createTestData() {
   fileNames = nameGenerator->GetFileNames(seriesIdentifier);
   itkReader->SetFileNames(fileNames);
   try {
-    itkReader->Update();
+      itkReader->Update();
   } catch (...) {
   }
 
@@ -149,9 +147,9 @@ void VTKOpenGLWidget::createTestData() {
   matrix->Identity();
 
   for (unsigned int i = 0; i < 3; ++i) {
-    for (unsigned int j = 0; j < 3; ++j) {
-      matrix->SetElement(i, j, direction(i, j));
-    }
+      for (unsigned int j = 0; j < 3; ++j) {
+          matrix->SetElement(i, j, direction(i, j));
+      }
   }
 
   using FilterType = itk::ImageToVTKImageFilter<ImageType>;
@@ -162,8 +160,8 @@ void VTKOpenGLWidget::createTestData() {
   // Get the VTK image
   auto image = filter->GetOutput();
   if (image) {
-    qDebug() << "converted successfully";
-    // image->Print(std::cout);
+      qDebug() << "converted successfully";
+      // image->Print(std::cout);
   }
 
   vtkNew<vtkImageThreshold> threshold;
@@ -211,29 +209,29 @@ void VTKOpenGLWidget::createTestData() {
 
 void VTKOpenGLWidget::saveImage(vtkImageData *image,
                                 vtkMatrix4x4 *directionMatrix) {
-                                    using ImageType = itk::Image<short, 3>;
-  using VTKImageToImageType = itk::VTKImageToImageFilter<ImageType>;
-  auto vtkImageToImageFilter = VTKImageToImageType::New();
-  vtkImageToImageFilter->SetInput(image);
-  vtkImageToImageFilter->Update();
+    using ImageType = itk::Image<short, 3>;
+    using VTKImageToImageType = itk::VTKImageToImageFilter<ImageType>;
+    auto vtkImageToImageFilter = VTKImageToImageType::New();
+    vtkImageToImageFilter->SetInput(image);
+    vtkImageToImageFilter->Update();
 
-  auto itkImage = vtkImageToImageFilter->GetOutput();
+    auto itkImage = vtkImageToImageFilter->GetOutput();
 
-  itk::Matrix<double, 3, 3> itkMatrix;
+    itk::Matrix<double, 3, 3> itkMatrix;
 
-  for (int i = 0; i < 3; ++i)
-    for (int j = 0; j < 3; ++j)
-      itkMatrix(i, j) = directionMatrix->GetElement(i, j);
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            itkMatrix(i, j) = directionMatrix->GetElement(i, j);
 
-  itkImage->SetDirection(itkMatrix);
+    itkImage->SetDirection(itkMatrix);
 
-  using WriterType = itk::ImageFileWriter<ImageType>;
-  std::string fileName = "D:/ttttt.nii.gz";
-  auto niftiIO = itk::NiftiImageIO::New();
+    using WriterType = itk::ImageFileWriter<ImageType>;
+    std::string fileName = "D:/ttttt.nii.gz";
+    auto niftiIO = itk::NiftiImageIO::New();
 
-  auto writer = WriterType::New();
-  writer->SetFileName(fileName.data());
-  writer->SetInput(itkImage);
-  writer->SetImageIO(niftiIO);
-  writer->Update();
-                                }
+    auto writer = WriterType::New();
+    writer->SetFileName(fileName.data());
+    writer->SetInput(itkImage);
+    writer->SetImageIO(niftiIO);
+    writer->Update();
+}
