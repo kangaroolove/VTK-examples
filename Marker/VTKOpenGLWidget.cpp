@@ -26,55 +26,55 @@
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
-  static KeyPressInteractorStyle *New();
-  vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
+    static KeyPressInteractorStyle *New();
+    vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
 
-  virtual void OnKeyPress() override {
-    vtkRenderWindowInteractor *rwi = this->Interactor;
-    std::string key = rwi->GetKeySym();
+    virtual void OnKeyPress() override {
+        vtkRenderWindowInteractor *rwi = this->Interactor;
+        std::string key = rwi->GetKeySym();
 
-    std::cout << "Pressed " << key << endl;
+        std::cout << "Pressed " << key << endl;
 
-    vtkNew<vtkTransform> transform;
-    vtkLinearTransform *userTransform = mProp->GetUserTransform();
-    if (key == "Up") {
-      transform->SetInput(userTransform);
-      transform->Translate(0, 1, 0);
-      mProp->SetUserMatrix(transform->GetMatrix());
-    } else if (key == "Down") {
-      transform->SetInput(userTransform);
-      transform->Translate(0, -1, 0);
-      mProp->SetUserMatrix(transform->GetMatrix());
-    } else if (key == "Left") {
-      transform->SetInput(userTransform);
-      transform->Translate(-1, 0, 0);
-      mProp->SetUserMatrix(transform->GetMatrix());
-    } else if (key == "Right") {
-      transform->SetInput(userTransform);
-      transform->Translate(1, 0, 0);
-      mProp->SetUserMatrix(transform->GetMatrix());
+        vtkNew<vtkTransform> transform;
+        vtkLinearTransform *userTransform = mProp->GetUserTransform();
+        if (key == "Up") {
+            transform->SetInput(userTransform);
+            transform->Translate(0, 1, 0);
+            mProp->SetUserMatrix(transform->GetMatrix());
+        } else if (key == "Down") {
+            transform->SetInput(userTransform);
+            transform->Translate(0, -1, 0);
+            mProp->SetUserMatrix(transform->GetMatrix());
+        } else if (key == "Left") {
+            transform->SetInput(userTransform);
+            transform->Translate(-1, 0, 0);
+            mProp->SetUserMatrix(transform->GetMatrix());
+        } else if (key == "Right") {
+            transform->SetInput(userTransform);
+            transform->Translate(1, 0, 0);
+            mProp->SetUserMatrix(transform->GetMatrix());
+        }
+
+        double *bounds = mProp->GetBounds();
+        for (int i = 0; i < 6; ++i) {
+            qDebug() << i << " = " << bounds[i];
+        }
+        mRenderWindow->Render();
+
+        vtkInteractorStyleTrackballCamera::OnKeyPress();
     }
+    void SetActor(vtkActor *actor) { mActor = actor; }
 
-    double *bounds = mProp->GetBounds();
-    for (int i = 0; i < 6; ++i) {
-      qDebug() << i << " = " << bounds[i];
+    void setProp3D(vtkProp3D *prop) { mProp = prop; }
+
+    void SetRenderWindow(vtkGenericOpenGLRenderWindow *window) {
+        mRenderWindow = window;
     }
-    mRenderWindow->Render();
-
-    vtkInteractorStyleTrackballCamera::OnKeyPress();
-  }
-  void SetActor(vtkActor *actor) { mActor = actor; }
-
-  void setProp3D(vtkProp3D *prop) { mProp = prop; }
-
-  void SetRenderWindow(vtkGenericOpenGLRenderWindow *window) {
-    mRenderWindow = window;
-  }
 
 private:
-  vtkActor *mActor = nullptr;
-  vtkProp3D *mProp = nullptr;
-  vtkGenericOpenGLRenderWindow *mRenderWindow = nullptr;
+    vtkActor *mActor = nullptr;
+    vtkProp3D *mProp = nullptr;
+    vtkGenericOpenGLRenderWindow *mRenderWindow = nullptr;
 };
 vtkStandardNewMacro(KeyPressInteractorStyle);
 
@@ -86,23 +86,23 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
       m_captionActor(vtkSmartPointer<vtkCaptionActor2D>::New()),
       m_transform(vtkSmartPointer<vtkTransform>::New()),
       m_markerActor(vtkSmartPointer<MarkerPointActor>::New()) {
-  initialize();
-  createTestData();
+    initialize();
+    createTestData();
 }
 
 VTKOpenGLWidget::~VTKOpenGLWidget() {}
 
 void VTKOpenGLWidget::initialize() {
-  m_renderWindow->AddRenderer(m_renderer);
-  SetRenderWindow(m_renderWindow);
+    m_renderWindow->AddRenderer(m_renderer);
+    SetRenderWindow(m_renderWindow);
 
-  auto it = m_renderWindow->GetInteractor();
-  m_style->SetRenderWindow(m_renderWindow);
-  it->SetInteractorStyle(m_style);
+    auto it = m_renderWindow->GetInteractor();
+    m_style->SetRenderWindow(m_renderWindow);
+    it->SetInteractorStyle(m_style);
 }
 
 void VTKOpenGLWidget::createTestData() {
-  m_markerActor->setText("KangarooLove");
-  m_renderer->AddActor(m_markerActor);
-  m_style->setProp3D(m_markerActor);
+    m_markerActor->setText("KangarooLove");
+    m_renderer->AddActor(m_markerActor);
+    m_style->setProp3D(m_markerActor);
 }
