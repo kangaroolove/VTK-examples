@@ -18,51 +18,56 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     : QVTKOpenGLNativeWidget(parent),
       m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New()),
       m_renderer(vtkSmartPointer<vtkRenderer>::New()) {
-  initialize();
-  createTestData();
+    initialize();
+    createTestData();
 }
 
 VTKOpenGLWidget::~VTKOpenGLWidget() {}
 
 void VTKOpenGLWidget::initialize() {
-  m_renderWindow->AddRenderer(m_renderer);
-  SetRenderWindow(m_renderWindow);
+    m_renderWindow->AddRenderer(m_renderer);
+    SetRenderWindow(m_renderWindow);
 }
 
 void VTKOpenGLWidget::createTestData() {
-  // Since VTK8.2.0 vtkImageData doesn't have directionMatrix and the origin is
-  // always (0, 0, 0). I don't know if they have fixed that problem in VTK9.0+.
-  // Please use ITK to save the image
+    // Since VTK8.2.0 vtkImageData doesn't have directionMatrix and the origin
+    // is always (0, 0, 0). I don't know if they have fixed that problem in
+    // VTK9.0+. Please use ITK to save the image
 
-  QString inputFileName = "D:/lesion1A.nii.gz";
-  QString outputFileName = "D:/testNiiSave.nii.gz";
+    QString inputFileName = "D:/lesion1A.nii.gz";
+    QString outputFileName = "D:/testNiiSave.nii.gz";
 
-  using ImageType = itk::Image<short, 3>;
+    using ImageType = itk::Image<short, 3>;
 
-  using ReaderType = itk::ImageFileReader<ImageType>;
-  auto niftiIO = itk::NiftiImageIO::New();
-  auto reader = ReaderType::New();
-  reader->SetFileName(inputFileName.toStdString().data());
-  reader->SetImageIO(niftiIO);
+    using ReaderType = itk::ImageFileReader<ImageType>;
+    auto niftiIO = itk::NiftiImageIO::New();
+    auto reader = ReaderType::New();
+    reader->SetFileName(inputFileName.toStdString().data());
+    reader->SetImageIO(niftiIO);
 
-  try {
-    reader->Update();
-  } catch (itk::ExceptionObject &error) {
-    qCritical() << QString("ITK image read with error %1").arg(error.what());
-    return;
-  }
-  qDebug() << "Read " << inputFileName << " file successfully";
+    try {
+        reader->Update();
+    } catch (itk::ExceptionObject &error) {
+        qCritical()
+            << QString("ITK image read with error %1").arg(error.what());
+        return;
+    }
 
-  using WriterType = itk::ImageFileWriter<ImageType>;
-  auto writer = WriterType::New();
-  writer->SetFileName(outputFileName.toStdString().data());
-  writer->SetInput(reader->GetOutput());
+    qDebug() << "Read " << inputFileName << " file successfully";
 
-  try {
-    writer->Update();
-  } catch (itk::ExceptionObject &error) {
-    qCritical() << QString("ITK image write with error %1").arg(error.what());
-    return;
-  }
-  qDebug() << "Write" << outputFileName << " file successfully";
+    using WriterType = itk::ImageFileWriter<ImageType>;
+    auto writer = WriterType::New();
+    writer->SetFileName(outputFileName.toStdString().data());
+    writer->SetInput(reader->GetOutput());
+
+    try {
+        writer->Update();
+
+    } catch (itk::ExceptionObject &error) {
+        qCritical()
+            << QString("ITK image write with error %1").arg(error.what());
+        return;
+    }
+
+    qDebug() << "Write" << outputFileName << " file successfully";
 }
