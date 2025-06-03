@@ -45,3 +45,5 @@
 /LesionSegmentation/.vscode
 /ImageThreshold/.vscode
 /ImageThreshold/build
+/ReadContouringFile/.vscode
+/ReadContouringFile/build
