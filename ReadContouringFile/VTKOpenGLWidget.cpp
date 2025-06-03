@@ -93,7 +93,8 @@ vtkStandardNewMacro(KeyPressInteractorStyle);
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     : QVTKOpenGLNativeWidget(parent),
       m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New()),
-      m_renderer(vtkSmartPointer<vtkRenderer>::New()),
+      m_leftRender(vtkSmartPointer<vtkRenderer>::New()),
+      m_rightRender(vtkSmartPointer<vtkRenderer>::New()),
       m_style(vtkSmartPointer<KeyPressInteractorStyle>::New()) {
     initialize();
     createTestData();
@@ -102,17 +103,21 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
 VTKOpenGLWidget::~VTKOpenGLWidget() {}
 
 void VTKOpenGLWidget::initialize() {
-    m_renderer->SetBackground(0.0, 1.0, 0.0);
-    m_renderWindow->AddRenderer(m_renderer);
+    m_leftRender->SetBackground(1.0, 0.0, 0.0);
+    m_leftRender->SetViewport(0, 0, 0.5, 1.0);
+
+    m_rightRender->SetBackground(0.0, 1.0, 0.0);
+    m_rightRender->SetViewport(0.5, 0, 1.0, 1.0);
+
+    m_renderWindow->AddRenderer(m_leftRender);
+    m_renderWindow->AddRenderer(m_rightRender);
     SetRenderWindow(m_renderWindow);
     m_renderWindow->GetInteractor()->SetInteractorStyle(m_style);
-    m_style->SetRenderer(m_renderer);
+    m_style->SetRenderer(m_rightRender);
 }
 
 void VTKOpenGLWidget::createTestData() {
     std::string fileName = "D:/contouringWithHole.nii.gz";
-    int index = 0;
-    double level = 883;
 
     using ImageType = itk::Image<short, 3>;
     using ReaderType = itk::ImageFileReader<ImageType>;
@@ -205,11 +210,11 @@ void VTKOpenGLWidget::createTestData() {
     isoActor->SetMapper(isoMapper);
     // isoActor->GetProperty()->SetColor(1.0, 0.0, 0.0);
 
-    m_renderer->AddActor(isoActor);
+    m_rightRender->AddActor(isoActor);
 
-    // m_renderer->AddViewProp(slice);
-    // m_style->SetImageSlice(slice);
+    m_leftRender->AddViewProp(slice);
+    m_style->SetImageSlice(slice);
 
-    m_renderer->GetActiveCamera()->ApplyTransform(transform);
-    m_renderer->ResetCamera();
+    m_leftRender->GetActiveCamera()->ApplyTransform(transform);
+    m_leftRender->ResetCamera();
 }
