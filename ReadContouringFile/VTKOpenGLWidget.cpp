@@ -1,33 +1,40 @@
 #include "VTKOpenGLWidget.h"
-#include <QDebug>
+
 #include <itkGDCMImageIO.h>
 #include <itkGDCMSeriesFileNames.h>
 #include <itkImage.h>
 #include <itkImageSeriesReader.h>
 #include <itkImageToVTKImageFilter.h>
+#include <itkNiftiImageIO.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
 #include <vtkConeSource.h>
+#include <vtkContourTriangulator.h>
 #include <vtkDICOMImageReader.h>
+#include <vtkFillHolesFilter.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkImageActor.h>
 #include <vtkImageData.h>
 #include <vtkImageMapper3D.h>
+#include <vtkImageMarchingCubes.h>
 #include <vtkImageProperty.h>
 #include <vtkImageReslice.h>
 #include <vtkImageResliceMapper.h>
 #include <vtkImageSlice.h>
 #include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkLookupTable.h>
+#include <vtkMarchingSquares.h>
 #include <vtkMatrix4x4.h>
 #include <vtkNew.h>
 #include <vtkPlane.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
-#include <itkNiftiImageIO.h>
-#include <vtkLookupTable.h>
+
+#include <QDebug>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -146,6 +153,20 @@ void VTKOpenGLWidget::createTestData() {
         // image->Print(std::cout);
     }
 
+    vtkNew<vtkMarchingSquares> marchingCubes;
+    marchingCubes->SetInputData(image);
+    marchingCubes->SetValue(0, 0.5);
+    marchingCubes->Update();
+
+    vtkNew<vtkContourTriangulator> triangular;
+    triangular->SetInputData(marchingCubes->GetOutput());
+    triangular->Update();
+
+    vtkNew<vtkFillHolesFilter> filleHoles;
+    filleHoles->SetInputData(triangular->GetOutput());
+    filleHoles->SetHoleSize(1000.0);
+    filleHoles->Update();
+
     // If I don't use this, the application will crash
     vtkNew<vtkImageReslice> reslice;
     reslice->SetInputData(filter->GetOutput());
@@ -158,11 +179,6 @@ void VTKOpenGLWidget::createTestData() {
 
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputData(reslice->GetOutput());
-
-    // qDebug()<<"mapper->GetSliceAtFocalPoint() =
-    // "<<mapper->GetSliceAtFocalPoint();
-    // qDebug()<<"mapper->SetSliceFacesCamera() =
-    // "<<mapper->GetSliceFacesCamera();
 
     mapper->SetSliceAtFocalPoint(true);
     mapper->SetSliceFacesCamera(true);
@@ -181,8 +197,18 @@ void VTKOpenGLWidget::createTestData() {
     slice->GetProperty()->SetLookupTable(lookupTable);
     slice->SetUserMatrix(matrix);
 
-    m_renderer->AddViewProp(slice);
-    m_style->SetImageSlice(slice);
+    vtkNew<vtkPolyDataMapper> isoMapper;
+    isoMapper->SetInputConnection(filleHoles->GetOutputPort());
+    isoMapper->ScalarVisibilityOff();
+
+    vtkNew<vtkActor> isoActor;
+    isoActor->SetMapper(isoMapper);
+    // isoActor->GetProperty()->SetColor(1.0, 0.0, 0.0);
+
+    m_renderer->AddActor(isoActor);
+
+    // m_renderer->AddViewProp(slice);
+    // m_style->SetImageSlice(slice);
 
     m_renderer->GetActiveCamera()->ApplyTransform(transform);
     m_renderer->ResetCamera();
