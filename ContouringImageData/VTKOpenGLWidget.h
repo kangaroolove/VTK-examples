@@ -40,7 +40,7 @@ private:
     void initialize();
     void createTestData();
     void initColor(vtkImageData *image, const int &color);
-    std::vector<std::array<int, 6>> detectPotentialImageHoles();
+    std::vector<std::array<int, 6>> getDrawnExtents();
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;

@@ -374,9 +374,9 @@ void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color) {
         image->GetPointData()->GetScalars()->SetTuple1(i, color);
 }
 
-std::vector<std::array<int, 6>> VTKOpenGLWidget::detectPotentialImageHoles() {
+std::vector<std::array<int, 6>> VTKOpenGLWidget::getDrawnExtents() {
     const int EXTENT_SIZE = 6;
-    std::vector<std::array<int, EXTENT_SIZE>> list;
+    std::vector<std::array<int, EXTENT_SIZE>> extents;
 
     vtkNew<vtkImageConnectivityFilter> connectivity;
     connectivity->SetInputData(m_baseImage);
@@ -388,37 +388,37 @@ std::vector<std::array<int, 6>> VTKOpenGLWidget::detectPotentialImageHoles() {
     auto num = connectivity->GetNumberOfExtractedRegions();
     auto extentArray = connectivity->GetExtractedRegionExtents();
 
-    std::array<int, EXTENT_SIZE> holeExtent;
+    std::array<int, EXTENT_SIZE> extent;
     for (int i = 0; i < num; ++i) {
-        holeExtent[0] = extentArray->GetValue(EXTENT_SIZE * i);
-        holeExtent[1] = extentArray->GetValue(EXTENT_SIZE * i + 1);
-        holeExtent[2] = extentArray->GetValue(EXTENT_SIZE * i + 2);
-        holeExtent[3] = extentArray->GetValue(EXTENT_SIZE * i + 3);
-        holeExtent[4] = extentArray->GetValue(EXTENT_SIZE * i + 4);
-        holeExtent[5] = extentArray->GetValue(EXTENT_SIZE * i + 5);
-        list.push_back(holeExtent);
+        extent[0] = extentArray->GetValue(EXTENT_SIZE * i);
+        extent[1] = extentArray->GetValue(EXTENT_SIZE * i + 1);
+        extent[2] = extentArray->GetValue(EXTENT_SIZE * i + 2);
+        extent[3] = extentArray->GetValue(EXTENT_SIZE * i + 3);
+        extent[4] = extentArray->GetValue(EXTENT_SIZE * i + 4);
+        extent[5] = extentArray->GetValue(EXTENT_SIZE * i + 5);
+        extents.push_back(extent);
     }
 
-return list;
+    return extents;
 }
 
 void VTKOpenGLWidget::autoFill() {
     if (!m_baseImage) return;
 
-    auto imageHoleList = detectPotentialImageHoles();
-    if (imageHoleList.empty()) return;
+    auto extents = getDrawnExtents();
+    if (extents.empty()) return;
 
     std::array<int, 6> imageExtent;
     m_baseImage->GetExtent(imageExtent.data());
 
-    for (auto &holeExtent : imageHoleList) {
-        int maxHoleExtentX = holeExtent[1];
-        int minHoleExtentX = holeExtent[0];
-        int maxHoleExtentY = holeExtent[3];
-        int minHoleExtentY = holeExtent[2];
+    for (auto &extent : extents) {
+        int maxExtentX = extent[1];
+        int minExtentX = extent[0];
+        int maxExtentY = extent[3];
+        int minExtentY = extent[2];
 
-        int rowRange = maxHoleExtentX - minHoleExtentX + 1;
-        int colRange = maxHoleExtentY - minHoleExtentY + 1;
+        int rowRange = maxExtentX - minExtentX + 1;
+        int colRange = maxExtentY - minExtentY + 1;
 
         std::vector<std::vector<int>> grid;
         grid.assign(rowRange, std::vector<int>(colRange, 0));
@@ -426,7 +426,7 @@ void VTKOpenGLWidget::autoFill() {
         for (int i = 0; i < grid.size(); ++i)
             for (int j = 0; j < grid[0].size(); ++j) {
                 auto value = m_baseImage->GetScalarComponentAsDouble(
-                    i + minHoleExtentX, j + minHoleExtentY, holeExtent[4], 0);
+                    i + minExtentX, j + minExtentY, extent[4], 0);
                 grid[i][j] = value;
             }
 
@@ -434,9 +434,9 @@ void VTKOpenGLWidget::autoFill() {
         auto holes = detector.detectHoles();
 
         for (const auto hole : holes) {
-            m_baseImage->SetScalarComponentFromDouble(
-                hole.first + minHoleExtentX, hole.second + minHoleExtentY,
-                holeExtent[4], 0, 1.0);
+            m_baseImage->SetScalarComponentFromDouble(hole.first + minExtentX,
+                                                      hole.second + minExtentY,
+                                                      extent[4], 0, 1.0);
         }
 
         if (!holes.empty()) {
