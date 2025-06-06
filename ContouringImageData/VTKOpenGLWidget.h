@@ -3,6 +3,8 @@
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkSmartPointer.h>
 
+#include <array>
+
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
 class InteractorStyleImage;
@@ -25,8 +27,8 @@ private:
     int m_rows;
     int m_cols;
     // Directions for 4-connectivity (up, down, left, right)
-    int m_dx[4];
-    int m_dy[4];
+    std::array<int, 4> m_dx;
+    std::array<int, 4> m_dy;
 };
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
 public:
