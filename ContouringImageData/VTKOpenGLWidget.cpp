@@ -374,7 +374,7 @@ void VTKOpenGLWidget::initColor(vtkImageData *image, const int &color) {
         image->GetPointData()->GetScalars()->SetTuple1(i, color);
 }
 
-std::vector<std::array<int, 6>> VTKOpenGLWidget::detectImageHole() {
+std::vector<std::array<int, 6>> VTKOpenGLWidget::detectPotentialImageHoles() {
     const int EXTENT_SIZE = 6;
     std::vector<std::array<int, EXTENT_SIZE>> list;
 
@@ -402,10 +402,15 @@ std::vector<std::array<int, 6>> VTKOpenGLWidget::detectImageHole() {
 return list;
 }
 
+void VTKOpenGLWidget::floodFill(int startX, int startY,
+                                std::vector<std::vector<int>> &grid) {}
+
 void VTKOpenGLWidget::autoFill() {
+    qDebug() << "VTKOpenGLWidget::autoFill()";
     if (!m_baseImage) return;
 
-    auto imageHoleList = detectImageHole();
+    auto imageHoleList = detectPotentialImageHoles();
+    qDebug() << "imageHoleList.empty() = " << imageHoleList.empty();
     if (imageHoleList.empty()) return;
 
     std::array<int, 6> imageExtent;
@@ -416,6 +421,67 @@ void VTKOpenGLWidget::autoFill() {
         int minHoleExtentX = holeExtent[0];
         int maxHoleExtentY = holeExtent[3];
         int minHoleExtentY = holeExtent[2];
+
+        int colRange = maxHoleExtentX - minHoleExtentX + 1;
+        int rowRange = maxHoleExtentY - minHoleExtentY + 1;
+
+        qDebug() << "rowRange = " << rowRange << ", colRange = " << colRange;
+
+        auto p = [=]() -> std::vector<std::vector<int>> {
+            std::vector<std::vector<int>> grid;
+            grid.assign(rowRange, std::vector<int>(colRange, 0));
+
+            for (int i = 0; i < grid.size(); ++i)
+                for (int j = 0; j < grid[0].size(); ++j) {
+                    auto value = m_baseImage->GetScalarComponentAsDouble(
+                        i + minHoleExtentX, j + minHoleExtentY, holeExtent[4],
+                        0);
+                    grid[i][j] = value;
+                }
+
+            // for (int i = minHoleExtentY; i <= maxHoleExtentY; ++i)
+            //     for (int j = minHoleExtentX; j <= maxHoleExtentX; ++j) {
+            //         auto value = m_baseImage->GetScalarComponentAsDouble(
+            //             j, i, holeExtent[4], 0);
+            //         grid[i - minHoleExtentY][j - minHoleExtentX] = value;
+            //     }
+
+            for (int i = 0; i < grid.size(); i++) {
+                for (int j = 0; j < grid[0].size(); j++) {
+                    std::cout << ", " << grid[i][j];
+                }
+                std::cout << endl;
+            }
+
+            return grid;
+        };
+
+        HoleDetector detector(p());
+        auto holes = detector.detectHoles();
+
+        if (holes.empty()) {
+            qDebug() << "There is no holes";
+        }
+
+        for (auto hole : holes) {
+            qDebug() << "x = " << hole.first + minHoleExtentX
+                     << ", y = " << hole.second + minHoleExtentY;
+        }
+
+        for (const auto hole : holes) {
+            m_baseImage->SetScalarComponentFromDouble(
+                hole.first + minHoleExtentX, hole.second + minHoleExtentY,
+                holeExtent[4], 0, 1.0);
+        }
+
+        qDebug() << "After ";
+        p();
+        if (!holes.empty()) {
+            m_baseImage->Modified();
+            m_renderWindow->Render();
+        }
+
+#if 0
 
         int centerExtentX =
             (maxHoleExtentX - minHoleExtentX) / 2 + minHoleExtentX;
@@ -467,12 +533,12 @@ void VTKOpenGLWidget::autoFill() {
             }
             m_baseImage->Modified();
         }
+#endif
     }
-    m_renderWindow->Render();
 }
 
-std::vector<std::pair<int, int>>
-InteractorStyleImage::calculatePixelBlockList(const double &radius) {
+std::vector<std::pair<int, int>> InteractorStyleImage::calculatePixelBlockList(
+    const double &radius) {
     std::vector<std::pair<int, int>> pixelBlockList;
 
     double spacing[3];
@@ -494,5 +560,87 @@ InteractorStyleImage::calculatePixelBlockList(const double &radius) {
             pixelBlockList.push_back(adjacentPixelBlockIndex[i]);
     }
 
-return pixelBlockList;
+    return pixelBlockList;
+}
+
+HoleDetector::HoleDetector(const std::vector<std::vector<int>> &inputGrid)
+    : m_grid(inputGrid), m_rows(0), m_cols(0) {
+    if (m_grid.empty()) return;
+
+    m_rows = static_cast<int>(m_grid.size());
+    m_cols = static_cast<int>(m_grid[0].size());
+    m_visited.assign(m_rows, std::vector<bool>(m_cols, false));
+}
+
+std::vector<std::pair<int, int>> HoleDetector::detectHoles() {
+    // Reset visited array
+    m_visited.assign(m_rows, std::vector<bool>(m_cols, false));
+
+    // Step 1: Flood fill from all border cells containing 0
+
+    // Top and bottom rows
+    for (int j = 0; j < m_cols; j++) {
+        if (m_grid[0][j] == 0) {
+            floodFillBFS(0, j);
+        }
+        if (m_grid[m_rows - 1][j] == 0) {
+            floodFillBFS(m_rows - 1, j);
+        }
+    }
+
+    // Left and right columns (excluding corners already processed)
+    for (int i = 1; i < m_rows - 1; i++) {
+        if (m_grid[i][0] == 0) {
+            floodFillBFS(i, 0);
+        }
+        if (m_grid[i][m_cols - 1] == 0) {
+            floodFillBFS(i, m_cols - 1);
+        }
+    }
+
+    // Step 2: Find all unvisited 0s (these are holes)
+    std::vector<std::pair<int, int>> holes;
+    for (int i = 0; i < m_rows; i++) {
+        for (int j = 0; j < m_cols; j++) {
+            if (m_grid[i][j] == 0 && !m_visited[i][j]) {
+                holes.push_back({i, j});
+            }
+        }
+    }
+
+    return holes;
+}
+
+bool HoleDetector::isValid(int x, int y) {
+    return x >= 0 && x < m_rows && y >= 0 && y < m_cols;
+}
+
+void HoleDetector::floodFillBFS(int startX, int startY) {
+    if (!isValid(startX, startY) || m_visited[startX][startY] ||
+        m_grid[startX][startY] == 1) {
+        return;
+    }
+
+    std::queue<std::pair<int, int>> q;
+    q.push({startX, startY});
+    m_visited[startX][startY] = true;
+
+    while (!q.empty()) {
+        auto current = q.front();
+        q.pop();
+        int x = current.first;
+        int y = current.second;
+
+        // Check all 4 directions
+        for (int i = 0; i < 4; i++) {
+            int newX = x + dx[i];
+            int newY = y + dy[i];
+
+            if (isValid(newX, newY) && !m_visited[newX][newY] &&
+                m_grid[newX][newY] == 0) {
+                m_visited[newX][newY] = true;
+                q.push({newX, newY});
+            }
+        }
+    }
 }
