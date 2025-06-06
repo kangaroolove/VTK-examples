@@ -422,10 +422,8 @@ void VTKOpenGLWidget::autoFill() {
         int maxHoleExtentY = holeExtent[3];
         int minHoleExtentY = holeExtent[2];
 
-        int colRange = maxHoleExtentX - minHoleExtentX + 1;
-        int rowRange = maxHoleExtentY - minHoleExtentY + 1;
-
-        qDebug() << "rowRange = " << rowRange << ", colRange = " << colRange;
+        int rowRange = maxHoleExtentX - minHoleExtentX + 1;
+        int colRange = maxHoleExtentY - minHoleExtentY + 1;
 
         auto p = [=]() -> std::vector<std::vector<int>> {
             std::vector<std::vector<int>> grid;
@@ -439,34 +437,11 @@ void VTKOpenGLWidget::autoFill() {
                     grid[i][j] = value;
                 }
 
-            // for (int i = minHoleExtentY; i <= maxHoleExtentY; ++i)
-            //     for (int j = minHoleExtentX; j <= maxHoleExtentX; ++j) {
-            //         auto value = m_baseImage->GetScalarComponentAsDouble(
-            //             j, i, holeExtent[4], 0);
-            //         grid[i - minHoleExtentY][j - minHoleExtentX] = value;
-            //     }
-
-            for (int i = 0; i < grid.size(); i++) {
-                for (int j = 0; j < grid[0].size(); j++) {
-                    std::cout << ", " << grid[i][j];
-                }
-                std::cout << endl;
-            }
-
             return grid;
         };
 
         HoleDetector detector(p());
         auto holes = detector.detectHoles();
-
-        if (holes.empty()) {
-            qDebug() << "There is no holes";
-        }
-
-        for (auto hole : holes) {
-            qDebug() << "x = " << hole.first + minHoleExtentX
-                     << ", y = " << hole.second + minHoleExtentY;
-        }
 
         for (const auto hole : holes) {
             m_baseImage->SetScalarComponentFromDouble(
@@ -474,11 +449,11 @@ void VTKOpenGLWidget::autoFill() {
                 holeExtent[4], 0, 1.0);
         }
 
-        qDebug() << "After ";
-        p();
         if (!holes.empty()) {
             m_baseImage->Modified();
             m_renderWindow->Render();
+        } else {
+            qDebug() << "There is no holes";
         }
 
 #if 0
