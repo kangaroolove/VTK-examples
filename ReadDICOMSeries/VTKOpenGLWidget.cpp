@@ -193,6 +193,9 @@ void VTKOpenGLWidget::createTestData() {
     m_renderer->AddViewProp(slice);
     m_style->SetImageSlice(slice);
 
+    m_renderer->GetActiveCamera()->Pitch(180);
+    m_renderer->GetActiveCamera()->Roll(180);
     m_renderer->GetActiveCamera()->ApplyTransform(transform);
+
     m_renderer->ResetCamera();
 }
