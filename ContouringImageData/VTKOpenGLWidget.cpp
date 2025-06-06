@@ -403,11 +403,9 @@ return list;
 }
 
 void VTKOpenGLWidget::autoFill() {
-    qDebug() << "VTKOpenGLWidget::autoFill()";
     if (!m_baseImage) return;
 
     auto imageHoleList = detectPotentialImageHoles();
-    qDebug() << "imageHoleList.empty() = " << imageHoleList.empty();
     if (imageHoleList.empty()) return;
 
     std::array<int, 6> imageExtent;
