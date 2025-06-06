@@ -475,7 +475,11 @@ std::vector<std::pair<int, int>> InteractorStyleImage::calculatePixelBlockList(
 }
 
 HoleDetector::HoleDetector(const std::vector<std::vector<int>> &inputGrid)
-    : m_grid(inputGrid), m_rows(0), m_cols(0) {
+    : m_grid(inputGrid),
+      m_rows(0),
+      m_cols(0),
+      m_dx{-1, 1, 0, 0},
+      m_dy{0, 0, -1, 1} {
     if (m_grid.empty()) return;
 
     m_rows = static_cast<int>(m_grid.size());
@@ -544,8 +548,8 @@ void HoleDetector::floodFillBFS(int startX, int startY) {
 
         // Check all 4 directions
         for (int i = 0; i < 4; i++) {
-            int newX = x + dx[i];
-            int newY = y + dy[i];
+            int newX = x + m_dx[i];
+            int newY = y + m_dy[i];
 
             if (isValid(newX, newY) && !m_visited[newX][newY] &&
                 m_grid[newX][newY] == 0) {

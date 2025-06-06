@@ -24,10 +24,9 @@ private:
     std::vector<std::vector<bool>> m_visited;
     int m_rows;
     int m_cols;
-
     // Directions for 4-connectivity (up, down, left, right)
-    int dx[4] = {-1, 1, 0, 0};
-    int dy[4] = {0, 0, -1, 1};
+    int m_dx[4];
+    int m_dy[4];
 };
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
 public:
