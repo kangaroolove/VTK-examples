@@ -41,7 +41,6 @@ private:
     void createTestData();
     void initColor(vtkImageData *image, const int &color);
     std::vector<std::array<int, 6>> detectPotentialImageHoles();
-    void floodFill(int startX, int startY, std::vector<std::vector<int>> &grid);
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;

@@ -402,9 +402,6 @@ std::vector<std::array<int, 6>> VTKOpenGLWidget::detectPotentialImageHoles() {
 return list;
 }
 
-void VTKOpenGLWidget::floodFill(int startX, int startY,
-                                std::vector<std::vector<int>> &grid) {}
-
 void VTKOpenGLWidget::autoFill() {
     qDebug() << "VTKOpenGLWidget::autoFill()";
     if (!m_baseImage) return;
@@ -425,22 +422,17 @@ void VTKOpenGLWidget::autoFill() {
         int rowRange = maxHoleExtentX - minHoleExtentX + 1;
         int colRange = maxHoleExtentY - minHoleExtentY + 1;
 
-        auto p = [=]() -> std::vector<std::vector<int>> {
-            std::vector<std::vector<int>> grid;
-            grid.assign(rowRange, std::vector<int>(colRange, 0));
+        std::vector<std::vector<int>> grid;
+        grid.assign(rowRange, std::vector<int>(colRange, 0));
 
-            for (int i = 0; i < grid.size(); ++i)
-                for (int j = 0; j < grid[0].size(); ++j) {
-                    auto value = m_baseImage->GetScalarComponentAsDouble(
-                        i + minHoleExtentX, j + minHoleExtentY, holeExtent[4],
-                        0);
-                    grid[i][j] = value;
-                }
+        for (int i = 0; i < grid.size(); ++i)
+            for (int j = 0; j < grid[0].size(); ++j) {
+                auto value = m_baseImage->GetScalarComponentAsDouble(
+                    i + minHoleExtentX, j + minHoleExtentY, holeExtent[4], 0);
+                grid[i][j] = value;
+            }
 
-            return grid;
-        };
-
-        HoleDetector detector(p());
+        HoleDetector detector(grid);
         auto holes = detector.detectHoles();
 
         for (const auto hole : holes) {
@@ -455,60 +447,6 @@ void VTKOpenGLWidget::autoFill() {
         } else {
             qDebug() << "There is no holes";
         }
-
-#if 0
-
-        int centerExtentX =
-            (maxHoleExtentX - minHoleExtentX) / 2 + minHoleExtentX;
-        int centerExtentY =
-            (maxHoleExtentY - minHoleExtentY) / 2 + minHoleExtentY;
-
-        std::vector<std::vector<bool>> visited(
-            imageExtent[3], std::vector<bool>(imageExtent[1], false));
-        std::vector<std::pair<int, int>> toDrawArea;
-        std::queue<std::pair<int, int>> q;
-
-        visited[centerExtentX][centerExtentY] = true;
-        q.push({centerExtentX, centerExtentY});
-        toDrawArea.push_back({centerExtentX, centerExtentY});
-
-        std::vector<std::pair<int, int>> direction = {
-            {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-
-        bool result = true;
-        while (!q.empty()) {
-            std::pair<int, int> current = q.front();
-            q.pop();
-
-            for (auto &dir : direction) {
-                int x = current.first + dir.first;
-                int y = current.second + dir.second;
-
-                auto color = m_baseImage->GetScalarComponentAsDouble(
-                    x, y, holeExtent[4], 0);
-
-                if (color == 0.0 &&
-                    (x >= maxHoleExtentX || y >= maxHoleExtentY ||
-                     x <= minHoleExtentX || y <= minHoleExtentY)) {
-                    result = false;
-                    break;
-                } else if (color == 0.0 && !visited[x][y]) {
-                    visited[x][y] = true;
-                    q.push({x, y});
-                    toDrawArea.push_back({x, y});
-                }
-            }
-        }
-
-        if (result && toDrawArea.size() > 1) {
-            qDebug() << toDrawArea.size();
-            for (auto &item : toDrawArea) {
-                m_baseImage->SetScalarComponentFromDouble(
-                    item.first, item.second, holeExtent[4], 0, 1.0);
-            }
-            m_baseImage->Modified();
-        }
-#endif
     }
 }
 
