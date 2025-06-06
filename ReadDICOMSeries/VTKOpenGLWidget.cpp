@@ -26,6 +26,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
+#include <vtkLookupTable.h>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -102,9 +103,7 @@ void VTKOpenGLWidget::initialize() {
 
 void VTKOpenGLWidget::createTestData() {
     std::string dir =
-        "D:/Standard test-data/Set B - realPatient/Patient B/CBL_T2";
-    int index = 0;
-    double level = 883;
+        "D:/Standard test-data/Set B - Real Patient/Patient B/CBL_T2";
 
     using ImageType = itk::Image<short, 3>;
     using ReaderType = itk::ImageSeriesReader<ImageType>;
@@ -173,19 +172,22 @@ void VTKOpenGLWidget::createTestData() {
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputData(reslice->GetOutput());
 
-    // qDebug()<<"mapper->GetSliceAtFocalPoint() =
-    // "<<mapper->GetSliceAtFocalPoint();
-    // qDebug()<<"mapper->SetSliceFacesCamera() =
-    // "<<mapper->GetSliceFacesCamera();
-
     mapper->SetSliceAtFocalPoint(true);
     mapper->SetSliceFacesCamera(true);
+
+    vtkNew<vtkLookupTable> lut;
+    lut->SetRange(image->GetScalarRange());
+    lut->SetHueRange(0.0, 0.0);
+    lut->SetSaturationRange(0.0, 0.0);
+    lut->SetValueRange(0.0, 1.0);
+    lut->SetRampToLinear();
+    lut->Build();
 
     vtkNew<vtkImageSlice> slice;
     slice->SetMapper(mapper);
 
-    slice->GetProperty()->SetColorWindow(level * 2);
-    slice->GetProperty()->SetColorLevel(level);
+    slice->GetProperty()->UseLookupTableScalarRangeOn();
+    slice->GetProperty()->SetLookupTable(lut);
     slice->SetUserMatrix(matrix);
 
     m_renderer->AddViewProp(slice);
