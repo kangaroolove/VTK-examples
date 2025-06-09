@@ -227,19 +227,11 @@ void VTKOpenGLWidget::createTestData() {
 
   vtkNew<vtkImageResliceMapper> mapper;
   mapper->SetInputData(reslice->GetOutput());
-
-  // qDebug()<<"mapper->GetSliceAtFocalPoint() =
-  // "<<mapper->GetSliceAtFocalPoint(); qDebug()<<"mapper->SetSliceFacesCamera()
-  // = "<<mapper->GetSliceFacesCamera();
-
   mapper->SetSliceAtFocalPoint(true);
   mapper->SetSliceFacesCamera(true);
 
   vtkNew<vtkImageSlice> slice;
   slice->SetMapper(mapper);
-
-  // slice->GetProperty()->SetColorWindow(level * 2);
-  // slice->GetProperty()->SetColorLevel(level);
   slice->SetUserMatrix(matrix);
 
   m_renderer->AddViewProp(slice);
