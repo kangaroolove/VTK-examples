@@ -1,10 +1,13 @@
 #include "VTKOpenGLWidget.h"
-#include <QDebug>
+
 #include <itkGDCMImageIO.h>
 #include <itkGDCMSeriesFileNames.h>
 #include <itkImage.h>
+#include <itkImageFileWriter.h>
 #include <itkImageSeriesReader.h>
 #include <itkImageToVTKImageFilter.h>
+#include <itkNiftiImageIO.h>
+#include <itkVTKImageToImageFilter.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
 #include <vtkConeSource.h>
@@ -17,7 +20,9 @@
 #include <vtkImageReslice.h>
 #include <vtkImageResliceMapper.h>
 #include <vtkImageSlice.h>
+#include <vtkImageThreshold.h>
 #include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkLookupTable.h>
 #include <vtkMatrix4x4.h>
 #include <vtkNew.h>
 #include <vtkPlane.h>
@@ -26,10 +31,8 @@
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
-#include <vtkImageThreshold.h>
-#include <itkNiftiImageIO.h>
-#include <itkVTKImageToImageFilter.h>
-#include <itkImageFileWriter.h>
+
+#include <QDebug>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -105,106 +108,107 @@ void VTKOpenGLWidget::initialize() {
 }
 
 void VTKOpenGLWidget::createTestData() {
-  std::string dir =
-      "D:/Standard test-data/Set B - Real Patient/Patient B/CBL_T2";
-  int index = 0;
-  double level = 883;
+    std::string dir =
+        "D:/Standard test-data/Set B - Real Patient/Patient B/CBL_T2";
 
-  using ImageType = itk::Image<short, 3>;
-  using ReaderType = itk::ImageSeriesReader<ImageType>;
+    using ImageType = itk::Image<short, 3>;
+    using ReaderType = itk::ImageSeriesReader<ImageType>;
 
-  auto itkReader = ReaderType::New();
-  using ImageIOType = itk::GDCMImageIO;
-  auto dicomIO = ImageIOType::New();
+    auto itkReader = ReaderType::New();
+    using ImageIOType = itk::GDCMImageIO;
+    auto dicomIO = ImageIOType::New();
 
-  itkReader->SetImageIO(dicomIO);
+    itkReader->SetImageIO(dicomIO);
 
-  using NamesGeneratorType = itk::GDCMSeriesFileNames;
-  auto nameGenerator = NamesGeneratorType::New();
+    using NamesGeneratorType = itk::GDCMSeriesFileNames;
+    auto nameGenerator = NamesGeneratorType::New();
 
-  nameGenerator->SetUseSeriesDetails(true);
-  nameGenerator->AddSeriesRestriction("0008|0021");
-  nameGenerator->SetDirectory(dir);
+    nameGenerator->SetUseSeriesDetails(true);
+    nameGenerator->AddSeriesRestriction("0008|0021");
+    nameGenerator->SetDirectory(dir);
 
-  using SeriesIdContainer = std::vector<std::string>;
-  const SeriesIdContainer &seriesUID = nameGenerator->GetSeriesUIDs();
-  std::string seriesIdentifier;
-  seriesIdentifier = seriesUID.begin()->c_str();
+    using SeriesIdContainer = std::vector<std::string>;
+    const SeriesIdContainer &seriesUID = nameGenerator->GetSeriesUIDs();
+    std::string seriesIdentifier;
+    seriesIdentifier = seriesUID.begin()->c_str();
 
-  using FileNamesContainer = std::vector<std::string>;
-  FileNamesContainer fileNames;
-  fileNames = nameGenerator->GetFileNames(seriesIdentifier);
-  itkReader->SetFileNames(fileNames);
-  try {
-      itkReader->Update();
-  } catch (...) {
-  }
+    using FileNamesContainer = std::vector<std::string>;
+    FileNamesContainer fileNames;
+    fileNames = nameGenerator->GetFileNames(seriesIdentifier);
+    itkReader->SetFileNames(fileNames);
+    try {
+        itkReader->Update();
+    } catch (...) {
+    }
 
-  auto direction = itkReader->GetOutput()->GetDirection();
+    auto direction = itkReader->GetOutput()->GetDirection();
 
-  // Get direction matrix
-  vtkNew<vtkMatrix4x4> matrix;
-  matrix->Identity();
+    // Get direction matrix
+    vtkNew<vtkMatrix4x4> matrix;
+    matrix->Identity();
 
-  for (unsigned int i = 0; i < 3; ++i) {
-      for (unsigned int j = 0; j < 3; ++j) {
-          matrix->SetElement(i, j, direction(i, j));
-      }
-  }
+    for (unsigned int i = 0; i < 3; ++i) {
+        for (unsigned int j = 0; j < 3; ++j) {
+            matrix->SetElement(i, j, direction(i, j));
+        }
+    }
 
-  using FilterType = itk::ImageToVTKImageFilter<ImageType>;
-  FilterType::Pointer filter = FilterType::New();
-  filter->SetInput(itkReader->GetOutput());
-  filter->Update();
+    using FilterType = itk::ImageToVTKImageFilter<ImageType>;
+    FilterType::Pointer filter = FilterType::New();
+    filter->SetInput(itkReader->GetOutput());
+    filter->Update();
 
-  // Get the VTK image
-  auto image = filter->GetOutput();
-  if (image) {
-      qDebug() << "converted successfully";
-      // image->Print(std::cout);
-  }
+    // Get the VTK image
+    auto image = filter->GetOutput();
+    if (image) {
+        qDebug() << "converted successfully";
+        // image->Print(std::cout);
+    }
 
-  vtkNew<vtkImageThreshold> threshold;
-  threshold->SetInputData(image);
-  threshold->ThresholdByUpper(1);
-  threshold->ReplaceInOn();
-  threshold->SetInValue(0);
-  threshold->Update();
+    vtkNew<vtkImageThreshold> threshold;
+    threshold->SetInputData(image);
+    threshold->ThresholdByUpper(700);
+    threshold->ReplaceInOn();
+    threshold->SetInValue(0);
+    threshold->Update();
 
-  saveImage(image, matrix);
+    saveImage(image, matrix);
 
-  // If I don't use this, the application will crash
-  vtkNew<vtkImageReslice> reslice;
-  reslice->SetInputData(threshold->GetOutput());
-  reslice->Update();
+    // If I don't use this, the application will crash
+    vtkNew<vtkImageReslice> reslice;
+    reslice->SetInputData(threshold->GetOutput());
+    reslice->Update();
 
-  reslice->GetOutput()->Print(std::cout);
+    reslice->GetOutput()->Print(std::cout);
 
-  vtkNew<vtkTransform> transform;
-  transform->SetMatrix(matrix);
+    vtkNew<vtkTransform> transform;
+    transform->SetMatrix(matrix);
 
-  vtkNew<vtkImageResliceMapper> mapper;
-  mapper->SetInputData(reslice->GetOutput());
+    vtkNew<vtkImageResliceMapper> mapper;
+    mapper->SetInputData(reslice->GetOutput());
+    mapper->SetSliceAtFocalPoint(true);
+    mapper->SetSliceFacesCamera(true);
 
-  // qDebug()<<"mapper->GetSliceAtFocalPoint() =
-  // "<<mapper->GetSliceAtFocalPoint(); qDebug()<<"mapper->SetSliceFacesCamera()
-  // = "<<mapper->GetSliceFacesCamera();
+    vtkNew<vtkLookupTable> lut;
+    lut->SetRange(image->GetScalarRange());
+    lut->SetHueRange(0.0, 0.0);
+    lut->SetSaturationRange(0.0, 0.0);
+    lut->SetValueRange(0.0, 1.0);
+    lut->SetRampToLinear();
+    lut->Build();
 
-  mapper->SetSliceAtFocalPoint(true);
-  mapper->SetSliceFacesCamera(true);
+    vtkNew<vtkImageSlice> slice;
+    slice->SetMapper(mapper);
 
-  vtkNew<vtkImageSlice> slice;
-  slice->SetMapper(mapper);
+    slice->GetProperty()->UseLookupTableScalarRangeOn();
+    slice->GetProperty()->SetLookupTable(lut);
+    slice->SetUserMatrix(matrix);
 
-  slice->GetProperty()->SetColorWindow(level * 2);
-  slice->GetProperty()->SetColorLevel(level);
-  slice->SetUserMatrix(matrix);
+    m_renderer->AddViewProp(slice);
+    m_style->SetImageSlice(slice);
 
-  m_renderer->AddViewProp(slice);
-  m_style->SetImageSlice(slice);
-
-  m_renderer->GetActiveCamera()->ApplyTransform(transform);
-  m_renderer->ResetCamera();
+    m_renderer->GetActiveCamera()->ApplyTransform(transform);
+    m_renderer->ResetCamera();
 }
 
 void VTKOpenGLWidget::saveImage(vtkImageData *image,
