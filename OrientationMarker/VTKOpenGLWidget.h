@@ -5,6 +5,7 @@
 
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
+class vtkOrientationMarkerWidget;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
 public:
@@ -17,4 +18,5 @@ private:
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
+    vtkSmartPointer<vtkOrientationMarkerWidget> m_markerWidget;
 };
