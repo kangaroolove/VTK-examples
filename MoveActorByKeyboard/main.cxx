@@ -38,9 +38,14 @@ public:
         vtkNew<vtkTransform> transform;
         vtkLinearTransform *userTransform = mConeActor->GetUserTransform();
         if (key == "Up") {
-            transform->SetInput(userTransform);
-            transform->Translate(0, 1, 0);
-            mConeActor->SetUserTransform(transform);
+            std::cout<< *mConeActor->GetMatrix()<<endl;
+
+            auto userMatrix = mConeActor->GetUserMatrix();
+            if (userMatrix)
+                std::cout<<*userMatrix<<endl;
+            // transform->SetInput(userTransform);
+            // transform->Translate(0, 1, 0);
+            // mConeActor->SetUserTransform(transform);
         } else if (key == "Down") {
             transform->SetInput(userTransform);
             transform->Translate(0, -1, 0);

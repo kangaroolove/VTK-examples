@@ -10,6 +10,7 @@
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
 class vtkCamera;
+class KeyPressInteractorStyle;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
     Q_OBJECT
@@ -33,7 +34,8 @@ private:
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
     vtkSmartPointer<vtkCamera> m_camera;
-    
+    vtkSmartPointer<KeyPressInteractorStyle> m_style;
+
     // Gesture state
     QPointF m_lastPanPoint;
     qreal m_lastScaleFactor;
