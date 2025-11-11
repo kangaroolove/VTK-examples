@@ -1,6 +1,6 @@
 # VTK-examples
 - VTK version: vtk8.2.0
-- Qt version: Qt5.12.10
+- Qt version >= 5.9
 ### ResliceCursor
 ![image](https://user-images.githubusercontent.com/16329871/235338690-a939ea71-3bc6-4855-b2d6-ce4578bb656c.png)
 ### MoveActorByKeyboard
@@ -11,6 +11,8 @@
 ![image](https://github.com/user-attachments/assets/b6ed4035-da60-4fd0-8f29-6d7c822de15e)
 ### ContouringImageData
 ![image](https://github.com/user-attachments/assets/1db46bac-5c80-4ab0-a6af-cbee8a59c533)
+### OrientationMarker
+<img width="642" height="512" alt="image" src="https://github.com/user-attachments/assets/c70edc07-5b45-4b48-ab3f-5ec57a9f8c97" />
 
 
 
