@@ -34,16 +34,27 @@ void VTKOpenGLWidget::createTestData() {
     reader->Update();
     reader->GetOutput()->GetPointData()->SetActiveScalars("Color");
 
-    vtkNew<vtkDataSetMapper> mapper;
-    mapper->SetInputConnection(reader->GetOutputPort());
-    mapper->SetColorModeToDirectScalars();
+    vtkNew<vtkDataSetMapper> markerMapper;
+    markerMapper->SetInputConnection(reader->GetOutputPort());
+    markerMapper->SetColorModeToDirectScalars();
 
-    vtkNew<vtkActor> actor;
-    actor->SetMapper(mapper);
+    vtkNew<vtkActor> markerActor;
+    markerActor->SetMapper(markerMapper);
 
-    m_markerWidget->SetOrientationMarker(actor);
+    m_markerWidget->SetOrientationMarker(markerActor);
     m_markerWidget->SetInteractor(m_renderWindow->GetInteractor());
     m_markerWidget->SetViewport(0.0, 0.0, 0.2, 0.2);
     m_markerWidget->SetEnabled(1);
     m_markerWidget->InteractiveOff();
+
+    vtkNew<vtkConeSource> cone;
+
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputConnection(cone->GetOutputPort());
+
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+
+    m_renderer->AddActor(actor);
+    m_renderer->ResetCamera();
 }
