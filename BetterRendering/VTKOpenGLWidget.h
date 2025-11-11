@@ -14,17 +14,16 @@ public:
     VTKOpenGLWidget(QWidget *parent = nullptr);
     ~VTKOpenGLWidget();
 private slots:
-    void timeout();
     void forceRender();
     void scheduleRender();
+    void onRenderTimerTimeout();
 
 private:
     void initialize();
     void createTestData();
+    void initRenderTimer();
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
-    QTimer *m_requestTimer;
-    QElapsedTimer m_requestTime;
-    double m_MaximumUpdateRate;
+    QTimer *m_renderTimer;
 };
