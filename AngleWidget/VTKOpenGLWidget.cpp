@@ -78,31 +78,15 @@ void VTKOpenGLWidget::initialize() {
 }
 
 void VTKOpenGLWidget::createTestData() {
-    // vtkNew<vtkConeSource> cone;
-
-    // vtkNew<vtkPolyDataMapper> mapper;
-    // mapper->SetInputConnection(cone->GetOutputPort());
-
-    // vtkNew<vtkActor> actor;
-    // actor->SetMapper(mapper);
-
-    // m_renderer->AddActor(actor);
     vtkNew<vtkAngleRepresentation3D> rep;
-    vtkNew<vtkAngleRepresentation2D> rep2D;
-
-
-    qDebug()<<"Label format = "<<rep->GetLabelFormat();
-    qDebug()<<"Label tolenrance = "<<rep->GetTolerance();
     rep->SetLabelFormat("%-#6.2f");
 
-  m_angleWidget->SetInteractor(m_renderWindow->GetInteractor());
-  m_angleWidget->CreateDefaultRepresentation();
-   //rep2D->SetLabelFormat("%-#6.3g rad");
+    m_angleWidget->SetInteractor(m_renderWindow->GetInteractor());
+    m_angleWidget->CreateDefaultRepresentation();
 
-  m_angleWidget->SetRepresentation(rep);
-  m_angleCallBack->Rep = rep;
-  //m_angleWidget->AddObserver(vtkCommand::InteractionEvent, m_angleCallBack);
-  m_angleWidget->AddObserver(vtkCommand::EndInteractionEvent, m_angleCallBack);
-  m_angleWidget->On();
-
+    m_angleWidget->SetRepresentation(rep);
+    m_angleCallBack->Rep = rep;
+    m_angleWidget->AddObserver(vtkCommand::EndInteractionEvent,
+                               m_angleCallBack);
+    m_angleWidget->On();
 }
