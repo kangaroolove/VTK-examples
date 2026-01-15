@@ -1,12 +1,15 @@
 #include "VTKOpenGLWidget.h"
+
 #include <vtkActor.h>
 #include <vtkConeSource.h>
 #include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkIsotropicDiscreteRemeshing.h>
 #include <vtkNew.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
 #include <vtkRenderer.h>
+#include <vtkSTLReader.h>
 #include <vtkSmartPointer.h>
-#include <vtkIsotropicDiscreteRemeshing.h>
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     : QVTKOpenGLNativeWidget(parent),
@@ -31,13 +34,15 @@ void VTKOpenGLWidget::initialize() {
 }
 
 void VTKOpenGLWidget::createTestData() {
-    vtkNew<vtkConeSource> cone;
+    vtkNew<vtkSTLReader> reader;
+    reader->SetFileName("D:/1.STL");
 
     vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputConnection(cone->GetOutputPort());
+    mapper->SetInputConnection(reader->GetOutputPort());
 
     vtkNew<vtkActor> actor;
     actor->SetMapper(mapper);
+    actor->GetProperty()->SetRepresentationToWireframe();
 
     m_leftRenderer->AddActor(actor);
 }
