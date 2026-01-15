@@ -38,7 +38,7 @@ void VTKOpenGLWidget::initialize() {
 void VTKOpenGLWidget::createTestData() {
     // left side
     vtkNew<vtkSTLReader> reader;
-    reader->SetFileName("D:/1.STL");
+    reader->SetFileName("D:/2.stl");
     reader->Update();
 
     vtkNew<vtkPolyDataMapper> mapperLeft;

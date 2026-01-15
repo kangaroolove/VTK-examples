@@ -35,8 +35,10 @@ include_directories(
   "ACVD/include/ACVD/VolumeProcessing"
 )
 
-list(APPEND EXTRA_LIBS debug ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkSurface-d.lib ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkVolumeProcessing-d.lib)
-list(APPEND EXTRA_LIBS optimized ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkSurface.lib ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkVolumeProcessing.lib)
+list(APPEND EXTRA_LIBS debug ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkSurface-d.lib 
+                       debug ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkVolumeProcessing-d.lib
+                       optimized ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkSurface.lib 
+                       optimized ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkVolumeProcessing.lib)
 
 set(PROJECT_SOURCES
     main.cpp
