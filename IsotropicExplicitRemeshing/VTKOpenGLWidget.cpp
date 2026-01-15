@@ -60,6 +60,8 @@ void VTKOpenGLWidget::createTestData() {
         vtkSmartPointer<vtkIsotropicDiscreteRemeshing>::New();
     remesher->SetInput(surface);
     remesher->SetNumberOfClusters(500);
+    // show log
+    remesher->SetConsoleOutput(2);
     remesher->Remesh();
 
     vtkNew<vtkPolyDataMapper> mapperRight;
