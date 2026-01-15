@@ -11,13 +11,15 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(ACVD REQUIRED)
-
 find_package(VTK COMPONENTS   
   vtkCommonCore
   vtkViewsQt
   vtkIOGeometry
   vtkInteractionStyle
+  vtkIOMINC
+  vtkIOImport
+  vtkIOExport
+  vtkIOPLY
 )
 
 include(${VTK_USE_FILE})
@@ -28,10 +30,13 @@ endif()
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
 include_directories(
+  "ACVD/include/ACVD/Common"
+  "ACVD/include/ACVD/DiscreteRemeshing"
+  "ACVD/include/ACVD/VolumeProcessing"
 )
 
-list(APPEND EXTRA_LIBS 
-)
+list(APPEND EXTRA_LIBS debug ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkSurface-d.lib ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkVolumeProcessing-d.lib)
+list(APPEND EXTRA_LIBS optimized ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkSurface.lib ${PROJECT_SOURCE_DIR}/ACVD/lib/vtkVolumeProcessing.lib)
 
 set(PROJECT_SOURCES
     main.cpp
@@ -51,4 +56,4 @@ add_executable(${PROJECT_NAME}
 	${PROJECT_RESOURCES}
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets ${VTK_LIBRARIES} ${EXTRA_LIBS} ${ACVD_LIBRRIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets ${VTK_LIBRARIES} ${EXTRA_LIBS})

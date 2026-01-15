@@ -10,6 +10,8 @@
 #include <vtkRenderer.h>
 #include <vtkSTLReader.h>
 #include <vtkSmartPointer.h>
+#include <vtkSurface.h>
+#include <vtkSurfaceBase.h>
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     : QVTKOpenGLNativeWidget(parent),
@@ -34,15 +36,41 @@ void VTKOpenGLWidget::initialize() {
 }
 
 void VTKOpenGLWidget::createTestData() {
+    // left side
     vtkNew<vtkSTLReader> reader;
     reader->SetFileName("D:/1.STL");
+    reader->Update();
+
+    vtkNew<vtkPolyData> mesh;
+    mesh->DeepCopy(reader->GetOutput());
 
     vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputConnection(reader->GetOutputPort());
 
     vtkNew<vtkActor> actor;
     actor->SetMapper(mapper);
-    actor->GetProperty()->SetRepresentationToWireframe();
+    actor->GetProperty()->EdgeVisibilityOn();
 
     m_leftRenderer->AddActor(actor);
+    // Right side
+
+    vtkNew<vtkSurface> surface;
+    surface->CreateFromPolyData(reader->GetOutput());
+    surface->GetCellData()->Initialize();
+    surface->GetPointData()->Initialize();
+
+    vtkSmartPointer<vtkIsotropicDiscreteRemeshing> remesher =
+        vtkSmartPointer<vtkIsotropicDiscreteRemeshing>::New();
+    remesher->SetInput(surface);
+    remesher->SetNumberOfClusters(500);
+    remesher->Remesh();
+
+    vtkNew<vtkPolyDataMapper> mapper2;
+    mapper2->SetInputData(remesher->GetOutput());
+
+    vtkNew<vtkActor> actor2;
+    actor2->SetMapper(mapper2);
+    actor2->GetProperty()->EdgeVisibilityOn();
+
+    m_rightRenderer->AddActor(actor2);
 }
