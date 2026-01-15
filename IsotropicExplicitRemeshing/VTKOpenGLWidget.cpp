@@ -41,19 +41,16 @@ void VTKOpenGLWidget::createTestData() {
     reader->SetFileName("D:/1.STL");
     reader->Update();
 
-    vtkNew<vtkPolyData> mesh;
-    mesh->DeepCopy(reader->GetOutput());
+    vtkNew<vtkPolyDataMapper> mapperLeft;
+    mapperLeft->SetInputConnection(reader->GetOutputPort());
 
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputConnection(reader->GetOutputPort());
+    vtkNew<vtkActor> actorLeft;
+    actorLeft->SetMapper(mapperLeft);
+    actorLeft->GetProperty()->EdgeVisibilityOn();
 
-    vtkNew<vtkActor> actor;
-    actor->SetMapper(mapper);
-    actor->GetProperty()->EdgeVisibilityOn();
+    m_leftRenderer->AddActor(actorLeft);
 
-    m_leftRenderer->AddActor(actor);
     // Right side
-
     vtkNew<vtkSurface> surface;
     surface->CreateFromPolyData(reader->GetOutput());
     surface->GetCellData()->Initialize();
@@ -65,12 +62,12 @@ void VTKOpenGLWidget::createTestData() {
     remesher->SetNumberOfClusters(500);
     remesher->Remesh();
 
-    vtkNew<vtkPolyDataMapper> mapper2;
-    mapper2->SetInputData(remesher->GetOutput());
+    vtkNew<vtkPolyDataMapper> mapperRight;
+    mapperRight->SetInputData(remesher->GetOutput());
 
-    vtkNew<vtkActor> actor2;
-    actor2->SetMapper(mapper2);
-    actor2->GetProperty()->EdgeVisibilityOn();
+    vtkNew<vtkActor> actorRight;
+    actorRight->SetMapper(mapperRight);
+    actorRight->GetProperty()->EdgeVisibilityOn();
 
-    m_rightRenderer->AddActor(actor2);
+    m_rightRenderer->AddActor(actorRight);
 }
