@@ -89,15 +89,15 @@ bool VTKOpenGLWidget::event(QEvent *event) {
 }
 
 bool VTKOpenGLWidget::gestureEvent(QGestureEvent *event) {
-    // if (QGesture *pan = event->gesture(Qt::PanGesture)) {
-    //     panTriggered(static_cast<QPanGesture *>(pan));
-    // }
+    if (QGesture *pan = event->gesture(Qt::PanGesture)) {
+        panTriggered(static_cast<QPanGesture *>(pan));
+    }
     if (QGesture *pinch = event->gesture(Qt::PinchGesture)) {
         pinchTriggered(static_cast<QPinchGesture *>(pinch));
     }
-    // if (QGesture *swipe = event->gesture(Qt::SwipeGesture)) {
-    //     swipeTriggered(static_cast<QSwipeGesture *>(swipe));
-    // }
+    if (QGesture *swipe = event->gesture(Qt::SwipeGesture)) {
+        swipeTriggered(static_cast<QSwipeGesture *>(swipe));
+    }
     return true;
 }
 
@@ -151,28 +151,24 @@ void VTKOpenGLWidget::panTriggered(QPanGesture *gesture) {
 void VTKOpenGLWidget::pinchTriggered(QPinchGesture *gesture) {
     QPinchGesture::ChangeFlags changeFlags = gesture->changeFlags();
     if (gesture->state() == Qt::GestureFinished) {
-        qDebug() << "Pinch finished";
         m_style->SetPinching(false);
-    }
-
-    if (gesture->state() == Qt::GestureStarted) {
-        qDebug() << "Pinch started";
+    } else if (gesture->state() == Qt::GestureStarted) {
         qreal currentScaleFactor = gesture->totalScaleFactor();
-        qDebug() << "currentScaleFactor = " << currentScaleFactor;
         m_style->SetPinching(true);
         m_lastScaleFactor = currentScaleFactor;
-    }
-
-    if (changeFlags & QPinchGesture::ScaleFactorChanged) {
-        qreal currentScaleFactor = gesture->totalScaleFactor();
-        if (gesture->state() == Qt::GestureUpdated) {
+    } else if (gesture->state() == Qt::GestureUpdated) {
+        auto changeFlags = gesture->changeFlags();
+        if (changeFlags & QPinchGesture::ScaleFactorChanged) {
+            auto currentScaleFactor = gesture->totalScaleFactor();
             qreal scaleDelta = currentScaleFactor / m_lastScaleFactor;
+            auto centerPoint = gesture->centerPoint();
+            auto convertPoint =
+                mapFromGlobal(QPoint(centerPoint.x(), centerPoint.y()));
 
             qDebug() << "currentScaleFactor = " << currentScaleFactor;
             qDebug() << "m_lastScaleFactor = " << m_lastScaleFactor;
             qDebug() << "scaleDelta = " << scaleDelta;
 
-            // Zoom the camera
             double *position = m_camera->GetPosition();
             double *focalPoint = m_camera->GetFocalPoint();
 
@@ -191,10 +187,6 @@ void VTKOpenGLWidget::pinchTriggered(QPinchGesture *gesture) {
 
             m_camera->SetPosition(position);
             m_lastScaleFactor = currentScaleFactor;
-
-            m_renderer->ResetCameraClippingRange();
-
-            // update();
             m_renderWindow->Render();
         }
     }
