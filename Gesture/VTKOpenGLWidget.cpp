@@ -19,61 +19,10 @@ public:
 
     void OnMouseMove() override {
         if (m_pinching) {
-            // double dyf =
-            //     this->Interactor->GetScale() /
-            //     this->Interactor->GetLastScale();
-
-            // auto dyf = 0.1;
-            // // qDebug() << "dyf = " << dyf;
-
-            // auto camera = mRenderer->GetActiveCamera();
-            // camera->Dolly(dyf);
-            // if (this->AutoAdjustCameraClippingRange) {
-            //     this->mRenderer->ResetCameraClippingRange();
-            // }
-
-            // mRenderWindow->Render();
             return;
         }
-
-        // qDebug() << "VTK OnMouseMove";
-
         vtkInteractorStyleTrackballCamera::OnMouseMove();
-        // qDebug()<<"OnMouseMove";
     }
-
-    // virtual void OnKeyPress() override {
-    //     vtkRenderWindowInteractor *rwi = this->Interactor;
-    //     std::string key = rwi->GetKeySym();
-
-    //     std::cout << "Pressed " << key << endl;
-
-    //     vtkNew<vtkTransform> transform;
-    //     vtkLinearTransform *userTransform =
-    //     mConeActor->GetUserTransform(); if (key == "Up") {
-    //         std::cout<< *mConeActor->GetMatrix()<<endl;
-
-    //         auto userMatrix = mConeActor->GetUserMatrix();
-    //         if (userMatrix)
-    //             std::cout<<*userMatrix<<endl;
-    //         // transform->SetInput(userTransform);
-    //         // transform->Translate(0, 1, 0);
-    //         // mConeActor->SetUserTransform(transform);
-    //     } else if (key == "Down") {
-    //         transform->SetInput(userTransform);
-    //         transform->Translate(0, -1, 0);
-    //         mConeActor->SetUserTransform(transform);
-    //     } else if (key == "Left") {
-    //         transform->SetInput(userTransform);
-    //         transform->Translate(-1, 0, 0);
-    //         mConeActor->SetUserTransform(transform);
-    //     } else if (key == "Right") {
-
-    //     }
-    //     mRenderWindow->Render();
-
-    //     vtkInteractorStyleTrackballCamera::OnKeyPress();
-    // }
     void SetConeActor(vtkActor *coneActor) { mConeActor = coneActor; }
     void SetRenderWindow(vtkRenderWindow *window) { mRenderWindow = window; }
     void SetPinching(bool pinching) { m_pinching = pinching; }
@@ -132,7 +81,10 @@ void VTKOpenGLWidget::setupGestures() {
 }
 
 bool VTKOpenGLWidget::event(QEvent *event) {
-    // qDebug() << "Qt Event = " << event;
+    if (event->type() == QEvent::Gesture) {
+        auto e = dynamic_cast<QGestureEvent *>(event);
+        if (e) return gestureEvent(e);
+    }
     return QVTKOpenGLNativeWidget::event(event);
 }
 

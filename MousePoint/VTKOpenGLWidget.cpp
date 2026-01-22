@@ -12,6 +12,7 @@
 #include <vtkSmartPointer.h>
 
 #include <QDebug>
+#include <QMouseEvent>
 #include <array>
 class MouseInteractorStyle : public vtkInteractorStyleImage {
 public:
@@ -31,8 +32,8 @@ public:
         std::array<double, 3> focalPoint;
         camera->GetFocalPoint(focalPoint.data());
 
-        std::cout << "camera focalPoint " << focalPoint[0] << ","
-                  << focalPoint[1] << "," << focalPoint[2] << endl;
+        // std::cout << "camera focalPoint " << focalPoint[0] << ","
+        //           << focalPoint[1] << "," << focalPoint[2] << endl;
 
         std::array<double, 3> displayPoint;
         ComputeWorldToDisplay(focalPoint[0], focalPoint[1], focalPoint[2],
@@ -44,15 +45,15 @@ public:
         ComputeDisplayToWorld(eventPosition[0], eventPosition[1], focalDepth,
                               worldPoint.data());
 
-        std::cout << "worldPoint " << worldPoint[0] << "," << worldPoint[1]
-                  << "," << worldPoint[2] << endl;
+        // std::cout << "worldPoint " << worldPoint[0] << "," << worldPoint[1]
+        //           << "," << worldPoint[2] << endl;
 
         vtkNew<vtkCoordinate> coordinate;
         coordinate->SetCoordinateSystemToDisplay();
         coordinate->SetValue(eventPosition[0], eventPosition[1], 0);
         double *worldPosition = coordinate->GetComputedWorldValue(m_renderer);
-        std::cout << "coordinate " << worldPosition[0] << ","
-                  << worldPosition[1] << "," << worldPosition[2] << endl;
+        // std::cout << "coordinate " << worldPosition[0] << ","
+        //           << worldPosition[1] << "," << worldPosition[2] << endl;
         vtkInteractorStyleImage::OnMouseMove();
     }
 
@@ -71,6 +72,11 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
 
 VTKOpenGLWidget::~VTKOpenGLWidget() {}
 
+void VTKOpenGLWidget::mouseMoveEvent(QMouseEvent *event) {
+    qDebug() << event->pos();
+    QVTKOpenGLNativeWidget::mouseMoveEvent(event);
+}
+
 void VTKOpenGLWidget::initialize() {
     vtkNew<MouseInteractorStyle> it;
     it->setRenderer(m_renderer);
@@ -79,6 +85,7 @@ void VTKOpenGLWidget::initialize() {
     SetRenderWindow(m_renderWindow);
 
     m_renderWindow->GetInteractor()->SetInteractorStyle(it);
+    resize(800, 600);
 }
 
 void VTKOpenGLWidget::createTestData() {
@@ -91,6 +98,4 @@ void VTKOpenGLWidget::createTestData() {
     actor->SetMapper(mapper);
 
     m_renderer->AddActor(actor);
-
-    auto camera = m_renderer->GetActiveCamera();
 }
