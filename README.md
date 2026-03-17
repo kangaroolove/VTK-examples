@@ -18,7 +18,8 @@
 <img width="642" height="512" alt="image" src="https://github.com/user-attachments/assets/032cbfea-94cd-4a33-ae78-172bcf5aed66" />
 
 ### IsotropicExplicitRemeshing
-<img width="837" height="702" alt="image" src="https://github.com/user-attachments/assets/4279c312-76da-4dec-8435-879ee538c4bc" />
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/24798f43-d729-4f6e-b622-6c94c298dfeb" />
+
 
 
 
