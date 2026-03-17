@@ -1,14 +1,19 @@
 #include "VTKOpenGLWidget.h"
 
 #include <vtkActor.h>
+#include <vtkCameraPass.h>
 #include <vtkConeSource.h>
 #include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkHiddenLineRemovalPass.h>
 #include <vtkIsotropicDiscreteRemeshing.h>
+#include <vtkLightsPass.h>
 #include <vtkNew.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkProperty.h>
+#include <vtkRenderPassCollection.h>
 #include <vtkRenderer.h>
 #include <vtkSTLReader.h>
+#include <vtkSequencePass.h>
 #include <vtkSmartPointer.h>
 #include <vtkSurface.h>
 #include <vtkSurfaceBase.h>
@@ -29,10 +34,26 @@ void VTKOpenGLWidget::initialize() {
     m_leftRenderer->SetViewport(0.0, 0.0, 0.5, 1.0);
     m_renderWindow->AddRenderer(m_leftRenderer);
 
-    m_rightRenderer->SetBackground(0.0, 1.0, 0.0);
+    m_rightRenderer->SetBackground(0.0, 0.0, 0.0);
     m_rightRenderer->SetViewport(0.5, 0, 1.0, 1.0);
     m_renderWindow->AddRenderer(m_rightRenderer);
     SetRenderWindow(m_renderWindow);
+
+    // backface culling
+    vtkNew<vtkLightsPass> lightsPass;
+    vtkNew<vtkHiddenLineRemovalPass> hlrPass;
+
+    vtkNew<vtkRenderPassCollection> collection;
+    collection->AddItem(lightsPass);
+    collection->AddItem(hlrPass);
+
+    vtkNew<vtkSequencePass> seqPass;
+    seqPass->SetPasses(collection);
+
+    vtkNew<vtkCameraPass> cameraPass;
+    cameraPass->SetDelegatePass(seqPass);
+
+    m_rightRenderer->SetPass(cameraPass);
 }
 
 void VTKOpenGLWidget::createTestData() {
@@ -69,7 +90,11 @@ void VTKOpenGLWidget::createTestData() {
 
     vtkNew<vtkActor> actorRight;
     actorRight->SetMapper(mapperRight);
-    actorRight->GetProperty()->EdgeVisibilityOn();
+    actorRight->GetProperty()->SetRepresentationToWireframe();
+    // Without this line, Sometimes, some edges look like having different
+    // color and it depends on edge color and background color.
+    // actorRight->GetProperty()->LightingOff();
+    actorRight->GetProperty()->SetColor(1.0, 1.0, 1.0);
 
     m_rightRenderer->AddActor(actorRight);
 }
