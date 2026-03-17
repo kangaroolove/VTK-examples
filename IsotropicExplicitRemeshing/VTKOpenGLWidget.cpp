@@ -93,7 +93,7 @@ void VTKOpenGLWidget::createTestData() {
     actorRight->GetProperty()->SetRepresentationToWireframe();
     // Without this line, Sometimes, some edges look like having different
     // color and it depends on edge color and background color.
-    // actorRight->GetProperty()->LightingOff();
+    actorRight->GetProperty()->LightingOff();
     actorRight->GetProperty()->SetColor(1.0, 1.0, 1.0);
 
     m_rightRenderer->AddActor(actorRight);
