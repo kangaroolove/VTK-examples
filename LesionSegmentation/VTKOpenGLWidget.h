@@ -17,6 +17,8 @@ public:
 private:
     void initialize();
     void createTestData();
+    bool readNiftiImage(const QString &fileName, vtkImageData *image,
+                        vtkMatrix4x4 *matrix);
     void saveImage(vtkImageData *image, vtkMatrix4x4 *directionMatrix,
                    const QString &fileName);
 

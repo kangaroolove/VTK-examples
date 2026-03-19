@@ -1,39 +1,43 @@
 #include "VTKOpenGLWidget.h"
-#include <QDebug>
+
 #include <itkGDCMImageIO.h>
 #include <itkGDCMSeriesFileNames.h>
 #include <itkImage.h>
+#include <itkImageFileReader.h>
+#include <itkImageFileWriter.h>
 #include <itkImageSeriesReader.h>
 #include <itkImageToVTKImageFilter.h>
+#include <itkNiftiImageIO.h>
+#include <itkVTKImageToImageFilter.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
 #include <vtkConeSource.h>
 #include <vtkDICOMImageReader.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkImageActor.h>
+#include <vtkImageConnectivityFilter.h>
 #include <vtkImageData.h>
 #include <vtkImageMapper3D.h>
 #include <vtkImageProperty.h>
 #include <vtkImageReslice.h>
 #include <vtkImageResliceMapper.h>
 #include <vtkImageSlice.h>
+#include <vtkImageStencil.h>
+#include <vtkImageThreshold.h>
+#include <vtkImageThresholdConnectivity.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkMatrix4x4.h>
+#include <vtkNIFTIImageWriter.h>
 #include <vtkNew.h>
 #include <vtkPlane.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkROIStencilSource.h>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
-#include <itkNiftiImageIO.h>
-#include <itkImageFileReader.h>
-#include <vtkImageConnectivityFilter.h>
-#include <vtkImageThreshold.h>
-#include <vtkImageThresholdConnectivity.h>
-#include <itkVTKImageToImageFilter.h>
-#include <vtkNIFTIImageWriter.h>
-#include <itkImageFileWriter.h>
+
+#include <QDebug>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -108,137 +112,133 @@ void VTKOpenGLWidget::initialize() {
     m_style->SetRenderer(m_renderer);
 }
 
-void VTKOpenGLWidget::createTestData() {
-    QString inputFileName = "D:/test4_1_lesion.nii.gz";
-
+bool VTKOpenGLWidget::readNiftiImage(const QString &fileName,
+                                     vtkImageData *image,
+                                     vtkMatrix4x4 *matrix) {
     using ImageType = itk::Image<short, 3>;
     using ReaderType = itk::ImageFileReader<ImageType>;
 
     auto niftiIO = itk::NiftiImageIO::New();
     auto reader = ReaderType::New();
-    reader->SetFileName(inputFileName.toStdString().data());
+    reader->SetFileName(fileName.toStdString().data());
     reader->SetImageIO(niftiIO);
 
     try {
         reader->Update();
-  } catch (itk::ExceptionObject &error) {
-      qCritical() << QString("ITK image read with error %1").arg(error.what());
-      return;
-  }
-  qDebug() << "Read " << inputFileName << " file successfully";
+    } catch (itk::ExceptionObject &error) {
+        qCritical()
+            << QString("ITK image read with error %1").arg(error.what());
+        return false;
+    }
+    qDebug() << "Read " << fileName << " file successfully";
 
-  auto direction = reader->GetOutput()->GetDirection();
+    auto direction = reader->GetOutput()->GetDirection();
+    matrix->Identity();
+    for (unsigned int i = 0; i < 3; ++i)
+        for (unsigned int j = 0; j < 3; ++j)
+            matrix->SetElement(i, j, direction(i, j));
 
-  // Get direction matrix
-  vtkNew<vtkMatrix4x4> matrix;
-  matrix->Identity();
+    using FilterType = itk::ImageToVTKImageFilter<ImageType>;
+    auto filter = FilterType::New();
+    filter->SetInput(reader->GetOutput());
+    filter->Update();
 
-  for (unsigned int i = 0; i < 3; ++i) {
-      for (unsigned int j = 0; j < 3; ++j) {
-          matrix->SetElement(i, j, direction(i, j));
-      }
-  }
+    image->DeepCopy(filter->GetOutput());
+    qDebug() << "converted successfully";
+    return true;
+}
 
-  using FilterType = itk::ImageToVTKImageFilter<ImageType>;
-  FilterType::Pointer filter = FilterType::New();
-  filter->SetInput(reader->GetOutput());
-  filter->Update();
+void VTKOpenGLWidget::createTestData() {
+    QString inputFileName = "D:/test4_1_lesion.nii.gz";
 
-  // Get the VTK image
-  auto image = filter->GetOutput();
-  if (image) {
-      qDebug() << "converted successfully";
-      // image->Print(std::cout);
-  }
+    vtkNew<vtkMatrix4x4> matrix;
+    vtkNew<vtkImageData> imageData;
+    if (!readNiftiImage(inputFileName, imageData, matrix)) return;
 
-  vtkNew<vtkImageConnectivityFilter> connectivityFilter;
-  connectivityFilter->SetInputData(image);
-  connectivityFilter->SetScalarRange(1, 1);
-  connectivityFilter->SetExtractionModeToAllRegions();
-  connectivityFilter->GenerateRegionExtentsOn();
-  connectivityFilter->Update();
+    auto image = imageData.Get();
 
-  const int EXTENT_SIZE = 6;
+    vtkNew<vtkImageConnectivityFilter> connectivityFilter;
+    connectivityFilter->SetInputData(image);
+    connectivityFilter->SetScalarRange(1, 1);
+    connectivityFilter->SetExtractionModeToAllRegions();
+    connectivityFilter->GenerateRegionExtentsOn();
+    connectivityFilter->Update();
 
-  vtkIdTypeArray *sizeArray = connectivityFilter->GetExtractedRegionSizes();
-  vtkIdTypeArray *idArray = connectivityFilter->GetExtractedRegionSeedIds();
-  vtkIdTypeArray *labelArray = connectivityFilter->GetExtractedRegionLabels();
-  vtkIntArray *extentArray = connectivityFilter->GetExtractedRegionExtents();
-  vtkIdType rn = connectivityFilter->GetNumberOfExtractedRegions();
+    const int EXTENT_SIZE = 6;
 
-  std::cout << "number of regions: " << rn << std::endl;
-  for (vtkIdType r = 0; r < rn; r++) {
-      std::cout << "region: " << r << ","
-                << " seed: " << idArray->GetValue(r) << ","
-                << " label: " << labelArray->GetValue(r) << ","
-                << " size: " << sizeArray->GetValue(r) << ","
-                << " extent: [";
+    vtkIdTypeArray *sizeArray = connectivityFilter->GetExtractedRegionSizes();
+    vtkIdTypeArray *idArray = connectivityFilter->GetExtractedRegionSeedIds();
+    vtkIdTypeArray *labelArray = connectivityFilter->GetExtractedRegionLabels();
+    vtkIntArray *extentArray = connectivityFilter->GetExtractedRegionExtents();
+    vtkIdType rn = connectivityFilter->GetNumberOfExtractedRegions();
 
-      std::array<int, 6> region;
-      if (connectivityFilter->GetGenerateRegionExtents()) {
-          std::cout << extentArray->GetValue(6 * r) << ","
-                    << extentArray->GetValue(6 * r + 1) << ","
-                    << extentArray->GetValue(6 * r + 2) << ","
-                    << extentArray->GetValue(6 * r + 3) << ","
-                    << extentArray->GetValue(6 * r + 4) << ","
-                    << extentArray->GetValue(6 * r + 5) << endl;
+    std::cout << "number of regions: " << rn << std::endl;
+    for (vtkIdType r = 0; r < rn; r++) {
+        std::cout << "region: " << r << ","
+                  << " seed: " << idArray->GetValue(r) << ","
+                  << " label: " << labelArray->GetValue(r) << ","
+                  << " size: " << sizeArray->GetValue(r) << ","
+                  << " extent: [";
 
-          region[0] = extentArray->GetValue(6 * r);
-          region[1] = extentArray->GetValue(6 * r + 1);
-          region[2] = extentArray->GetValue(6 * r + 2);
-          region[3] = extentArray->GetValue(6 * r + 3);
-          region[4] = extentArray->GetValue(6 * r + 4);
-          region[5] = extentArray->GetValue(6 * r + 5);
+        if (connectivityFilter->GetGenerateRegionExtents()) {
+            std::array<int, 6> region;
+            for (int i = 0; i < EXTENT_SIZE; ++i)
+                region[i] = extentArray->GetValue(EXTENT_SIZE * r + i);
 
-          vtkNew<vtkImageData> copyImage;
-          copyImage->DeepCopy(image);
+            std::cout << region[0] << "," << region[1] << "," << region[2]
+                      << "," << region[3] << "," << region[4] << ","
+                      << region[5] << endl;
 
-          std::array<int, 6> extent;
-          copyImage->GetExtent(extent.data());
+            double origin[3], spacing[3];
+            image->GetOrigin(origin);
+            image->GetSpacing(spacing);
 
-          for (int i = extent[0]; i < extent[1]; ++i)
-              for (int j = extent[2]; j < extent[3]; ++j)
-                  for (int k = extent[4]; k < extent[5]; ++k)
+            vtkNew<vtkROIStencilSource> stencilSource;
+            stencilSource->SetInformationInput(image);
+            stencilSource->SetBounds(origin[0] + region[0] * spacing[0],
+                                     origin[0] + region[1] * spacing[0],
+                                     origin[1] + region[2] * spacing[1],
+                                     origin[1] + region[3] * spacing[1],
+                                     origin[2] + region[4] * spacing[2],
+                                     origin[2] + region[5] * spacing[2]);
+            stencilSource->Update();
 
-                  {
-                      bool readyToPaintArea =
-                          (i < region[0] || i > region[1] || j < region[2] ||
-                           j > region[3] || k < region[4] || k > region[5]);
-                      bool isBlackPixel = copyImage->GetScalarComponentAsDouble(
-                                              i, j, k, 0) == 0;
-                      if (readyToPaintArea && !isBlackPixel)
-                          copyImage->SetScalarComponentFromDouble(i, j, k, 0,
-                                                                  0.0);
-                  }
-          saveImage(copyImage, matrix,
-                    QString("D:/lesionSegmentation_%1.nii.gz").arg(r));
-      }
-      std::cout << "]" << std::endl;
-  }
+            vtkNew<vtkImageStencil> stencil;
+            stencil->SetInputData(image);
+            stencil->SetStencilConnection(stencilSource->GetOutputPort());
+            stencil->SetBackgroundValue(0);
+            stencil->ReverseStencilOff();
+            stencil->Update();
 
-  vtkNew<vtkImageReslice> reslice;
-  reslice->SetInputData(filter->GetOutput());
-  reslice->Update();
+            saveImage(stencil->GetOutput(), matrix,
+                      QString("D:/lesionSegmentation_%1.nii.gz").arg(r));
+        }
+        std::cout << "]" << std::endl;
+    }
 
-  // reslice->GetOutput()->Print(std::cout);
+    vtkNew<vtkImageReslice> reslice;
+    reslice->SetInputData(imageData);
+    reslice->Update();
 
-  vtkNew<vtkTransform> transform;
-  transform->SetMatrix(matrix);
+    // reslice->GetOutput()->Print(std::cout);
 
-  vtkNew<vtkImageResliceMapper> mapper;
-  mapper->SetInputData(reslice->GetOutput());
-  mapper->SetSliceAtFocalPoint(true);
-  mapper->SetSliceFacesCamera(true);
+    vtkNew<vtkTransform> transform;
+    transform->SetMatrix(matrix);
 
-  vtkNew<vtkImageSlice> slice;
-  slice->SetMapper(mapper);
-  slice->SetUserMatrix(matrix);
+    vtkNew<vtkImageResliceMapper> mapper;
+    mapper->SetInputData(reslice->GetOutput());
+    mapper->SetSliceAtFocalPoint(true);
+    mapper->SetSliceFacesCamera(true);
 
-  m_renderer->AddViewProp(slice);
-  m_style->SetImageSlice(slice);
+    vtkNew<vtkImageSlice> slice;
+    slice->SetMapper(mapper);
+    slice->SetUserMatrix(matrix);
 
-  m_renderer->GetActiveCamera()->ApplyTransform(transform);
-  m_renderer->ResetCamera();
+    m_renderer->AddViewProp(slice);
+    m_style->SetImageSlice(slice);
+
+    m_renderer->GetActiveCamera()->ApplyTransform(transform);
+    m_renderer->ResetCamera();
 }
 
 void VTKOpenGLWidget::saveImage(vtkImageData *image,
