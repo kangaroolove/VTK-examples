@@ -25,6 +25,7 @@
 #include <vtkImageStencil.h>
 #include <vtkImageThreshold.h>
 #include <vtkImageThresholdConnectivity.h>
+#include <vtkImageToImageStencil.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkMatrix4x4.h>
 #include <vtkNIFTIImageWriter.h>
@@ -150,10 +151,15 @@ bool VTKOpenGLWidget::readNiftiImage(const QString &fileName,
 
 void VTKOpenGLWidget::createTestData() {
     QString inputFileName = "D:/test4_1_lesion.nii.gz";
+    QString mriFileName = "D:/MRI.nii.gz";
 
     vtkNew<vtkMatrix4x4> matrix;
     vtkNew<vtkImageData> imageData;
     if (!readNiftiImage(inputFileName, imageData, matrix)) return;
+
+    vtkNew<vtkMatrix4x4> mriMatrix;
+    vtkNew<vtkImageData> mriImage;
+    if (!readNiftiImage(mriFileName, mriImage, mriMatrix)) return;
 
     auto image = imageData.Get();
 
@@ -174,46 +180,64 @@ void VTKOpenGLWidget::createTestData() {
 
     std::cout << "number of regions: " << rn << std::endl;
     for (vtkIdType r = 0; r < rn; r++) {
-        std::cout << "region: " << r << ","
-                  << " seed: " << idArray->GetValue(r) << ","
-                  << " label: " << labelArray->GetValue(r) << ","
-                  << " size: " << sizeArray->GetValue(r) << ","
-                  << " extent: [";
+        std::cout << "region: " << r
+                  << ", seed: " << idArray->GetValue(r)
+                  << ", label: " << labelArray->GetValue(r)
+                  << ", size: " << sizeArray->GetValue(r) << std::endl;
 
-        if (connectivityFilter->GetGenerateRegionExtents()) {
-            std::array<int, 6> region;
-            for (int i = 0; i < EXTENT_SIZE; ++i)
-                region[i] = extentArray->GetValue(EXTENT_SIZE * r + i);
+        if (!connectivityFilter->GetGenerateRegionExtents())
+            continue;
 
-            std::cout << region[0] << "," << region[1] << "," << region[2]
-                      << "," << region[3] << "," << region[4] << ","
-                      << region[5] << endl;
+        std::array<int, 6> region;
+        for (int i = 0; i < EXTENT_SIZE; ++i)
+            region[i] = extentArray->GetValue(EXTENT_SIZE * r + i);
 
-            double origin[3], spacing[3];
-            image->GetOrigin(origin);
-            image->GetSpacing(spacing);
+        std::cout << "extent: [" << region[0] << "," << region[1] << ","
+                  << region[2] << "," << region[3] << ","
+                  << region[4] << "," << region[5] << "]" << std::endl;
 
-            vtkNew<vtkROIStencilSource> stencilSource;
-            stencilSource->SetInformationInput(image);
-            stencilSource->SetBounds(origin[0] + region[0] * spacing[0],
-                                     origin[0] + region[1] * spacing[0],
-                                     origin[1] + region[2] * spacing[1],
-                                     origin[1] + region[3] * spacing[1],
-                                     origin[2] + region[4] * spacing[2],
-                                     origin[2] + region[5] * spacing[2]);
-            stencilSource->Update();
+        // Build per-voxel stencil for this region's label
+        vtkNew<vtkImageThreshold> labelThreshold;
+        labelThreshold->SetInputData(connectivityFilter->GetOutput());
+        labelThreshold->ThresholdBetween(labelArray->GetValue(r),
+                                         labelArray->GetValue(r));
+        labelThreshold->ReplaceInOn();
+        labelThreshold->SetInValue(1);
+        labelThreshold->ReplaceOutOn();
+        labelThreshold->SetOutValue(0);
+        labelThreshold->Update();
 
-            vtkNew<vtkImageStencil> stencil;
-            stencil->SetInputData(image);
-            stencil->SetStencilConnection(stencilSource->GetOutputPort());
-            stencil->SetBackgroundValue(0);
-            stencil->ReverseStencilOff();
-            stencil->Update();
+        vtkNew<vtkImageToImageStencil> labelStencil;
+        labelStencil->SetInputData(labelThreshold->GetOutput());
+        labelStencil->ThresholdByUpper(1);
+        labelStencil->Update();
 
-            saveImage(stencil->GetOutput(), matrix,
-                      QString("D:/lesionSegmentation_%1.nii.gz").arg(r));
+        // Check MRI overlap first — skip region if no intersection
+        vtkNew<vtkImageStencil> mriStencil;
+        mriStencil->SetInputData(mriImage);
+        mriStencil->SetStencilConnection(labelStencil->GetOutputPort());
+        mriStencil->SetBackgroundValue(0);
+        mriStencil->ReverseStencilOff();
+        mriStencil->Update();
+
+        double scalarRange[2];
+        mriStencil->GetOutput()->GetScalarRange(scalarRange);
+        if (scalarRange[1] == 0) {
+            std::cout << "region " << r << " has no MRI overlap, skipping" << std::endl;
+            continue;
         }
-        std::cout << "]" << std::endl;
+
+        vtkNew<vtkImageStencil> lesionStencil;
+        lesionStencil->SetInputData(image);
+        lesionStencil->SetStencilConnection(labelStencil->GetOutputPort());
+        lesionStencil->SetBackgroundValue(0);
+        lesionStencil->ReverseStencilOff();
+        lesionStencil->Update();
+
+        saveImage(lesionStencil->GetOutput(), matrix,
+                  QString("D:/lesionSegmentation_%1.nii.gz").arg(r));
+        saveImage(mriStencil->GetOutput(), mriMatrix,
+                  QString("D:/mriIntersection_%1.nii.gz").arg(r));
     }
 
     vtkNew<vtkImageReslice> reslice;
