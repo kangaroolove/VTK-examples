@@ -220,13 +220,6 @@ void VTKOpenGLWidget::createTestData() {
         mriStencil->ReverseStencilOff();
         mriStencil->Update();
 
-        double scalarRange[2];
-        mriStencil->GetOutput()->GetScalarRange(scalarRange);
-        if (scalarRange[1] == 0) {
-            std::cout << "region " << r << " has no MRI overlap, skipping" << std::endl;
-            continue;
-        }
-
         vtkNew<vtkImageStencil> lesionStencil;
         lesionStencil->SetInputData(image);
         lesionStencil->SetStencilConnection(labelStencil->GetOutputPort());
@@ -234,8 +227,18 @@ void VTKOpenGLWidget::createTestData() {
         lesionStencil->ReverseStencilOff();
         lesionStencil->Update();
 
+        // To verify the intersetion part
         saveImage(lesionStencil->GetOutput(), matrix,
                   QString("D:/lesionSegmentation_%1.nii.gz").arg(r));
+
+        double scalarRange[2];
+        mriStencil->GetOutput()->GetScalarRange(scalarRange);
+        if (scalarRange[1] == 0) {
+            std::cout << "region " << r << " has no MRI overlap, skipping"
+                      << std::endl;
+            continue;
+        }
+
         saveImage(mriStencil->GetOutput(), mriMatrix,
                   QString("D:/mriIntersection_%1.nii.gz").arg(r));
     }
