@@ -9,10 +9,6 @@ class vtkRenderer;
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
 public:
     VTKOpenGLWidget(QWidget *parent = nullptr);
-    ~VTKOpenGLWidget();
-
-// protected:
-//     void mouseMoveEvent(QMouseEvent *event) override;
 
 private:
     void initialize();

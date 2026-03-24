@@ -128,13 +128,6 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     createTestData();
 }
 
-VTKOpenGLWidget::~VTKOpenGLWidget() {}
-
-// void VTKOpenGLWidget::mouseMoveEvent(QMouseEvent *event) {
-//     qDebug() << event->pos();
-//     QVTKOpenGLNativeWidget::mouseMoveEvent(event);
-// }
-
 void VTKOpenGLWidget::initialize() {
     vtkNew<MouseInteractorStyle> it;
     it->setRenderer(m_renderer);
