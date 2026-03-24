@@ -15,8 +15,6 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     createTestData();
 }
 
-VTKOpenGLWidget::~VTKOpenGLWidget() {}
-
 void VTKOpenGLWidget::initialize() {
     m_renderWindow->AddRenderer(m_renderer);
     SetRenderWindow(m_renderWindow);

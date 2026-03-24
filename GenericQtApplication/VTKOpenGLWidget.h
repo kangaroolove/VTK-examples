@@ -9,7 +9,6 @@ class vtkRenderer;
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
 public:
     VTKOpenGLWidget(QWidget *parent = nullptr);
-    ~VTKOpenGLWidget();
 
 private:
     void initialize();
