@@ -65,17 +65,24 @@ public:
                  << eventPosition[1];
 
         // world picker
+        // This result is totally wrong
+        // vtkWorldPointPicker reads the z-buffer at that pixel. If no geometry
+        // is rendered there,the z-buffer returns a default depth (near/far
+        // plane), leading to a nonsensical X,Y result. The result does not
+        // correspond to the actual clicked screen position — unreliable without
+        // geometry under the cursor
         vtkNew<vtkWorldPointPicker> picker;
-        picker->Pick(eventPosition[0], eventPosition[1], 0.0, m_renderer);  // Z=0 here is ignored!
+        picker->Pick(eventPosition[0], eventPosition[1], 0.0, m_renderer);
 
         double worldPickerPoint[3];
         picker->GetPickPosition(worldPickerPoint);
 
-        std::cout << "World picker point: " << worldPickerPoint[0] << ", " 
-                << worldPickerPoint[1] << ", " << worldPickerPoint[2] << std::endl;   
-
+        std::cout << "World picker point: " << worldPickerPoint[0] << ", "
+                  << worldPickerPoint[1] << ", " << worldPickerPoint[2]
+                  << std::endl;
 
         // Interator observer
+        // This is the correct way to get the world point
         auto camera = m_renderer->GetActiveCamera();
         std::array<double, 3> focalPoint;
         camera->GetFocalPoint(focalPoint.data());
@@ -97,6 +104,7 @@ public:
                   << "," << worldPoint[2] << endl;
 
         // VTK coordinate
+        // This result is wrong since the z buffer is 0
         vtkNew<vtkCoordinate> coordinate;
         coordinate->SetCoordinateSystemToDisplay();
         coordinate->SetValue(eventPosition[0], eventPosition[1], 0);
