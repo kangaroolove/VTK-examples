@@ -44,6 +44,8 @@ set(PROJECT_SOURCES
     main.cpp
     VTKOpenGLWidget.cpp
     VTKOpenGLWidget.h
+    IsotropicRemeshingFilter.cpp
+    IsotropicRemeshingFilter.h
 )
 
 set(PROJECT_UIS

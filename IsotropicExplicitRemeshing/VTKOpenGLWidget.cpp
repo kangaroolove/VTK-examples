@@ -5,7 +5,7 @@
 #include <vtkConeSource.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkHiddenLineRemovalPass.h>
-#include <vtkIsotropicDiscreteRemeshing.h>
+#include "IsotropicRemeshingFilter.h"
 #include <vtkLightsPass.h>
 #include <vtkNew.h>
 #include <vtkPolyDataMapper.h>
@@ -15,8 +15,6 @@
 #include <vtkSTLReader.h>
 #include <vtkSequencePass.h>
 #include <vtkSmartPointer.h>
-#include <vtkSurface.h>
-#include <vtkSurfaceBase.h>
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     : QVTKOpenGLNativeWidget(parent),
@@ -72,21 +70,12 @@ void VTKOpenGLWidget::createTestData() {
     m_leftRenderer->AddActor(actorLeft);
 
     // Right side
-    vtkNew<vtkSurface> surface;
-    surface->CreateFromPolyData(reader->GetOutput());
-    surface->GetCellData()->Initialize();
-    surface->GetPointData()->Initialize();
-
-    vtkSmartPointer<vtkIsotropicDiscreteRemeshing> remesher =
-        vtkSmartPointer<vtkIsotropicDiscreteRemeshing>::New();
-    remesher->SetInput(surface);
-    remesher->SetNumberOfClusters(500);
-    // show log
-    remesher->SetConsoleOutput(2);
-    remesher->Remesh();
+    vtkNew<IsotropicRemeshingFilter> remeshFilter;
+    remeshFilter->SetInputConnection(reader->GetOutputPort());
+    remeshFilter->SetNumberOfClusters(500);
 
     vtkNew<vtkPolyDataMapper> mapperRight;
-    mapperRight->SetInputData(remesher->GetOutput());
+    mapperRight->SetInputConnection(remeshFilter->GetOutputPort());
 
     vtkNew<vtkActor> actorRight;
     actorRight->SetMapper(mapperRight);
