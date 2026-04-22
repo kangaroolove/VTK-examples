@@ -70,25 +70,32 @@ void VTKOpenGLWidget::createTestData() {
 
     vtkNew<vtkActor> actorLeft;
     actorLeft->SetMapper(mapperLeft);
-    actorLeft->GetProperty()->EdgeVisibilityOn();
-
+    // actorLeft->GetProperty()->EdgeVisibilityOn();
     m_leftRenderer->AddActor(actorLeft);
 
-    // Right side
     vtkNew<IsotropicRemeshingFilter> remeshFilter;
     remeshFilter->SetInputConnection(reader->GetOutputPort());
     remeshFilter->SetNumberOfClusters(500);
 
+    // Middle side
+    vtkNew<vtkPolyDataMapper> mapperMiddle;
+    mapperMiddle->SetInputConnection(remeshFilter->GetOutputPort());
+
+    vtkNew<vtkActor> actorMiddle;
+    actorMiddle->SetMapper(mapperMiddle);
+    m_middleRenderer->AddActor(actorMiddle);
+
+    // Right side
     vtkNew<vtkPolyDataMapper> mapperRight;
     mapperRight->SetInputConnection(remeshFilter->GetOutputPort());
 
     vtkNew<vtkActor> actorRight;
     actorRight->SetMapper(mapperRight);
-    actorRight->GetProperty()->SetRepresentationToWireframe();
-    // Without this line, Sometimes, some edges look like having different
-    // color and it depends on edge color and background color.
-    actorRight->GetProperty()->LightingOff();
-    actorRight->GetProperty()->SetColor(1.0, 1.0, 1.0);
+    // actorRight->GetProperty()->SetRepresentationToWireframe();
+    //  Without this line, Sometimes, some edges look like having different
+    //  color and it depends on edge color and background color.
+    // actorRight->GetProperty()->LightingOff();
+    // actorRight->GetProperty()->SetColor(1.0, 1.0, 1.0);
 
     m_rightRenderer->AddActor(actorRight);
 }
