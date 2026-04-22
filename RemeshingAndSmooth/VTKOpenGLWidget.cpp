@@ -5,16 +5,19 @@
 #include <vtkConeSource.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkHiddenLineRemovalPass.h>
-#include "IsotropicRemeshingFilter.h"
 #include <vtkLightsPass.h>
 #include <vtkNew.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkPolyDataNormals.h>
 #include <vtkProperty.h>
 #include <vtkRenderPassCollection.h>
 #include <vtkRenderer.h>
 #include <vtkSTLReader.h>
 #include <vtkSequencePass.h>
 #include <vtkSmartPointer.h>
+#include <vtkSmoothPolyDataFilter.h>
+
+#include "IsotropicRemeshingFilter.h"
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     : QVTKOpenGLNativeWidget(parent),
@@ -78,8 +81,21 @@ void VTKOpenGLWidget::createTestData() {
     remeshFilter->SetNumberOfClusters(500);
 
     // Middle side
+    vtkNew<vtkSmoothPolyDataFilter> smoothFilter;
+    smoothFilter->SetInputConnection(remeshFilter->GetOutputPort());
+    smoothFilter->SetNumberOfIterations(10);
+    smoothFilter->SetRelaxationFactor(0.1);
+    smoothFilter->FeatureEdgeSmoothingOff();
+    smoothFilter->BoundarySmoothingOn();
+
+    vtkNew<vtkPolyDataNormals> normalGenerator;
+    normalGenerator->SetInputConnection(smoothFilter->GetOutputPort());
+    normalGenerator->ComputePointNormalsOn();
+    normalGenerator->ComputeCellNormalsOn();
+    normalGenerator->Update();
+
     vtkNew<vtkPolyDataMapper> mapperMiddle;
-    mapperMiddle->SetInputConnection(remeshFilter->GetOutputPort());
+    mapperMiddle->SetInputConnection(normalGenerator->GetOutputPort());
 
     vtkNew<vtkActor> actorMiddle;
     actorMiddle->SetMapper(mapperMiddle);
