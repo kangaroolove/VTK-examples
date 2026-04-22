@@ -17,5 +17,6 @@ private:
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_leftRenderer;
+    vtkSmartPointer<vtkRenderer> m_middleRenderer;
     vtkSmartPointer<vtkRenderer> m_rightRenderer;
 };
