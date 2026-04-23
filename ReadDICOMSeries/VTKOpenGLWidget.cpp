@@ -1,10 +1,11 @@
 #include "VTKOpenGLWidget.h"
-#include <QDebug>
+
 #include <itkGDCMImageIO.h>
 #include <itkGDCMSeriesFileNames.h>
 #include <itkImage.h>
 #include <itkImageSeriesReader.h>
 #include <itkImageToVTKImageFilter.h>
+#include <itkMetaDataObject.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
 #include <vtkConeSource.h>
@@ -18,6 +19,7 @@
 #include <vtkImageResliceMapper.h>
 #include <vtkImageSlice.h>
 #include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkLookupTable.h>
 #include <vtkMatrix4x4.h>
 #include <vtkNew.h>
 #include <vtkPlane.h>
@@ -26,7 +28,8 @@
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
-#include <vtkLookupTable.h>
+
+#include <QDebug>
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -102,8 +105,7 @@ void VTKOpenGLWidget::initialize() {
 }
 
 void VTKOpenGLWidget::createTestData() {
-    std::string dir =
-        "D:/Standard test-data/Set B - Real Patient/Patient B/CBL_T2";
+    std::string dir = "D:/Standard test-data-V3/Adnan Basirudin Mokodompit";
 
     using ImageType = itk::Image<short, 3>;
     using ReaderType = itk::ImageSeriesReader<ImageType>;
@@ -123,6 +125,12 @@ void VTKOpenGLWidget::createTestData() {
 
     using SeriesIdContainer = std::vector<std::string>;
     const SeriesIdContainer &seriesUID = nameGenerator->GetSeriesUIDs();
+
+    for (auto series : seriesUID) {
+        auto fileNames = nameGenerator->GetFileNames(series);
+        for (auto fileName : fileNames) std::cout << fileName << std::endl;
+    }
+
     std::string seriesIdentifier;
     seriesIdentifier = seriesUID.begin()->c_str();
 
@@ -133,6 +141,26 @@ void VTKOpenGLWidget::createTestData() {
     try {
         itkReader->Update();
     } catch (...) {
+    }
+
+    using DictionaryType = itk::MetaDataDictionary;
+
+    const DictionaryType &dictionary = dicomIO->GetMetaDataDictionary();
+
+    using MetaDataStringType = itk::MetaDataObject<std::string>;
+    std::string seriesNumber = "0020|0011";
+    auto it = dictionary.Find(seriesNumber);
+    if (it != dictionary.End()) {
+        itk::MetaDataObjectBase::Pointer entry = it->second;
+
+        MetaDataStringType::Pointer entryvalue =
+            dynamic_cast<MetaDataStringType *>(entry.GetPointer());
+
+        if (entryvalue) {
+            std::string tagkey = it->first;
+            std::string tagvalue = entryvalue->GetMetaDataObjectValue();
+            std::cout << tagkey << " = " << tagvalue << std::endl;
+        }
     }
 
     auto direction = itkReader->GetOutput()->GetDirection();
