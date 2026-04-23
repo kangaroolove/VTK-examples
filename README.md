@@ -20,6 +20,10 @@
 ### IsotropicExplicitRemeshing
 <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/24798f43-d729-4f6e-b622-6c94c298dfeb" />
 
+### RemeshingAndSmooth
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/6c0b8a3b-fd39-4bee-88cc-994f7d2600d3" />
+
+
 
 
 
