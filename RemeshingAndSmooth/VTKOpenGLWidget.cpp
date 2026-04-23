@@ -16,6 +16,7 @@
 #include <vtkSequencePass.h>
 #include <vtkSmartPointer.h>
 #include <vtkSmoothPolyDataFilter.h>
+#include <vtkWindowedSincPolyDataFilter.h>
 
 #include "IsotropicRemeshingFilter.h"
 
@@ -105,8 +106,23 @@ void VTKOpenGLWidget::createTestData() {
     m_middleRenderer->AddActor(actorMiddle);
 
     // Right side
+    vtkNew<vtkWindowedSincPolyDataFilter> sincPolyDataFilter;
+    sincPolyDataFilter->SetInputConnection(remeshFilter->GetOutputPort());
+    sincPolyDataFilter->FeatureEdgeSmoothingOff();
+    sincPolyDataFilter->BoundarySmoothingOn();
+    sincPolyDataFilter->SetNumberOfIterations(10);
+    sincPolyDataFilter->SetPassBand(0.1);
+    sincPolyDataFilter->NormalizeCoordinatesOn();
+
+    vtkNew<vtkPolyDataNormals> sincNormalGenerator;
+    sincNormalGenerator->SetInputConnection(
+        sincPolyDataFilter->GetOutputPort());
+    sincNormalGenerator->ComputePointNormalsOn();
+    sincNormalGenerator->ComputeCellNormalsOn();
+    sincNormalGenerator->Update();
+
     vtkNew<vtkPolyDataMapper> mapperRight;
-    mapperRight->SetInputConnection(remeshFilter->GetOutputPort());
+    mapperRight->SetInputConnection(sincNormalGenerator->GetOutputPort());
 
     vtkNew<vtkActor> actorRight;
     actorRight->SetMapper(mapperRight);
