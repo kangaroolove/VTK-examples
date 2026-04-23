@@ -84,10 +84,11 @@ void VTKOpenGLWidget::createTestData() {
     vtkNew<vtkSmoothPolyDataFilter> smoothFilter;
     smoothFilter->SetInputConnection(remeshFilter->GetOutputPort());
     smoothFilter->SetNumberOfIterations(10);
-    smoothFilter->SetRelaxationFactor(0.1);
+    smoothFilter->SetRelaxationFactor(0.5);
     smoothFilter->FeatureEdgeSmoothingOff();
     smoothFilter->BoundarySmoothingOn();
 
+    // without this, the skin doesn't look like smooth
     vtkNew<vtkPolyDataNormals> normalGenerator;
     normalGenerator->SetInputConnection(smoothFilter->GetOutputPort());
     normalGenerator->ComputePointNormalsOn();
@@ -99,6 +100,8 @@ void VTKOpenGLWidget::createTestData() {
 
     vtkNew<vtkActor> actorMiddle;
     actorMiddle->SetMapper(mapperMiddle);
+    // actorMiddle->GetProperty()->LightingOff();
+    // actorMiddle->GetProperty()->SetRepresentationToWireframe();
     m_middleRenderer->AddActor(actorMiddle);
 
     // Right side
