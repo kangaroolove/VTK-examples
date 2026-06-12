@@ -312,6 +312,9 @@ void VTKOpenGLWidget::updateCrosshairLines(SliceView &view) {
 }
 
 void VTKOpenGLWidget::setCrosshairPosition(double x, double y, double z) {
+    if (!m_image) {
+        return;
+    }
     m_crosshair[0] = std::min(std::max(x, m_worldBounds[0]), m_worldBounds[1]);
     m_crosshair[1] = std::min(std::max(y, m_worldBounds[2]), m_worldBounds[3]);
     m_crosshair[2] = std::min(std::max(z, m_worldBounds[4]), m_worldBounds[5]);
@@ -341,6 +344,10 @@ bool VTKOpenGLWidget::event(QEvent *event) {
 }
 
 bool VTKOpenGLWidget::handleCrosshairMouseEvent(QMouseEvent *event) {
+    // No image means no slice views or crosshair to interact with.
+    if (!m_image) {
+        return false;
+    }
     if (event->type() == QEvent::MouseButtonPress) {
         if (event->button() != Qt::LeftButton) {
             return false;
