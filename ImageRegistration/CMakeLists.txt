@@ -30,6 +30,7 @@ find_package(ITK REQUIRED
   ITKCommon
   ITKIOImageBase
   ITKIOGDCM
+  ITKIONRRD
   ITKVtkGlue
 )
 include(${ITK_USE_FILE})

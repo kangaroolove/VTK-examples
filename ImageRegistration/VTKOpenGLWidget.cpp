@@ -13,12 +13,19 @@
 #include <vtkImageReslice.h>
 #include <vtkInteractorStyleImage.h>
 #include <vtkLineSource.h>
+#include <vtkMatrix4x4.h>
 #include <vtkNew.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkProperty.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
+#include <vtkTransform.h>
+
+#include <itkImage.h>
+#include <itkImageFileReader.h>
+#include <itkImageToVTKImageFilter.h>
+#include <itkNrrdImageIO.h>
 
 #include <algorithm>
 
@@ -100,15 +107,108 @@ void VTKOpenGLWidget::createTestData() {
     ellipsoid->SetOutValue(0.0);
     ellipsoid->Update();
 
-    m_image = ellipsoid->GetOutput();
-    m_image->GetCenter(m_crosshair);
+    vtkNew<vtkMatrix4x4> identity;
+    setImage(ellipsoid->GetOutput(), identity);
+}
+
+bool VTKOpenGLWidget::loadImage(const QString &fileName, QString &errorMessage) {
+    typedef itk::Image<float, 3> ImageType;
+
+    const std::string path = fileName.toStdString();
+
+    itk::NrrdImageIO::Pointer io = itk::NrrdImageIO::New();
+    if (!io->CanReadFile(path.c_str())) {
+        errorMessage = tr("Only NRRD images (*.nrrd, *.nhdr) are supported:\n%1")
+                           .arg(fileName);
+        return false;
+    }
+
+    // ITK converts whatever space the NRRD header declares (RAS, LAS, ...)
+    // to LPS, so the origin and direction below are always in LPS.
+    itk::ImageFileReader<ImageType>::Pointer reader =
+        itk::ImageFileReader<ImageType>::New();
+    reader->SetImageIO(io);
+    reader->SetFileName(path);
+    try {
+        reader->Update();
+    } catch (itk::ExceptionObject &e) {
+        errorMessage = tr("Failed to read image:\n%1\n%2")
+                           .arg(fileName)
+                           .arg(QString::fromLatin1(e.GetDescription()));
+        return false;
+    }
+
+    ImageType::Pointer itkImage = reader->GetOutput();
+
+    // vtkImageData cannot store direction cosines, so keep the voxel grid in
+    // axis-aligned image coordinates (spacing only) and carry rotation and
+    // origin in a separate image-to-world matrix.
+    const ImageType::DirectionType direction = itkImage->GetDirection();
+    const ImageType::PointType origin = itkImage->GetOrigin();
+    vtkNew<vtkMatrix4x4> imageToWorld;
+    for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 3; ++col) {
+            imageToWorld->SetElement(row, col, direction(row, col));
+        }
+        imageToWorld->SetElement(row, 3, origin[row]);
+    }
+
+    typedef itk::ImageToVTKImageFilter<ImageType> ConnectorType;
+    ConnectorType::Pointer connector = ConnectorType::New();
+    connector->SetInput(itkImage);
+    connector->Update();
+
+    vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
+    image->DeepCopy(connector->GetOutput());
+    image->SetOrigin(0.0, 0.0, 0.0); // origin lives in imageToWorld
+
+    setImage(image, imageToWorld);
+    m_renderWindow->Render();
+    return true;
+}
+
+void VTKOpenGLWidget::setImage(vtkImageData *image, vtkMatrix4x4 *imageToWorld) {
+    m_image = image;
+    m_imageToWorld = imageToWorld;
+    updateWorldBounds();
+
+    m_crosshair[0] = 0.5 * (m_worldBounds[0] + m_worldBounds[1]);
+    m_crosshair[1] = 0.5 * (m_worldBounds[2] + m_worldBounds[3]);
+    m_crosshair[2] = 0.5 * (m_worldBounds[4] + m_worldBounds[5]);
 
     for (int i = 0; i < 3; ++i) {
         setupSliceView(m_views[i], m_image);
     }
 }
 
+void VTKOpenGLWidget::updateWorldBounds() {
+    double imageBounds[6];
+    m_image->GetBounds(imageBounds);
+
+    // World bounds are the axis-aligned box around the eight transformed
+    // corners of the image-space bounding box.
+    for (int corner = 0; corner < 8; ++corner) {
+        const double point[4] = {imageBounds[corner & 1],
+                                 imageBounds[2 + ((corner >> 1) & 1)],
+                                 imageBounds[4 + ((corner >> 2) & 1)], 1.0};
+        double world[4];
+        m_imageToWorld->MultiplyPoint(point, world);
+        for (int axis = 0; axis < 3; ++axis) {
+            if (corner == 0) {
+                m_worldBounds[2 * axis] = world[axis];
+                m_worldBounds[2 * axis + 1] = world[axis];
+            } else {
+                m_worldBounds[2 * axis] = std::min(m_worldBounds[2 * axis], world[axis]);
+                m_worldBounds[2 * axis + 1] = std::max(m_worldBounds[2 * axis + 1], world[axis]);
+            }
+        }
+    }
+}
+
 void VTKOpenGLWidget::setupSliceView(SliceView &view, vtkImageData *image) {
+    // A new image replaces the previous slice and crosshair actors.
+    view.renderer->RemoveAllViewProps();
+
     view.reslice = vtkSmartPointer<vtkImageReslice>::New();
     view.reslice->SetInputData(image);
     view.reslice->SetOutputDimensionality(2);
@@ -116,7 +216,24 @@ void VTKOpenGLWidget::setupSliceView(SliceView &view, vtkImageData *image) {
     view.reslice->SetResliceAxesDirectionCosines(axes[0], axes[1], axes[2],
                                                  axes[3], axes[4], axes[5],
                                                  axes[6], axes[7], axes[8]);
+
+    // The reslice axes are world-aligned (LPS) planes; the reslice transform
+    // maps those world coordinates into the image's own grid, applying the
+    // volume's rotation and origin.
+    vtkNew<vtkMatrix4x4> worldToImage;
+    vtkMatrix4x4::Invert(m_imageToWorld, worldToImage);
+    vtkNew<vtkTransform> resliceTransform;
+    resliceTransform->SetMatrix(worldToImage);
+    view.reslice->SetResliceTransform(resliceTransform);
+    view.reslice->AutoCropOutputOn();
     view.reslice->SetInterpolationModeToLinear();
+
+    double range[2];
+    image->GetScalarRange(range);
+    if (range[1] <= range[0]) {
+        range[1] = range[0] + 1.0;
+    }
+    view.reslice->SetBackgroundLevel(range[0]);
     updateResliceOrigin(view);
 
     // The in-plane components of the reslice origin never change, so these
@@ -126,8 +243,8 @@ void VTKOpenGLWidget::setupSliceView(SliceView &view, vtkImageData *image) {
 
     vtkNew<vtkImageActor> actor;
     actor->GetMapper()->SetInputConnection(view.reslice->GetOutputPort());
-    actor->GetProperty()->SetColorWindow(255.0);
-    actor->GetProperty()->SetColorLevel(127.5);
+    actor->GetProperty()->SetColorWindow(range[1] - range[0]);
+    actor->GetProperty()->SetColorLevel(0.5 * (range[0] + range[1]));
     view.renderer->AddViewProp(actor);
 
     // Lines are colored by the plane they represent in this view.
@@ -208,11 +325,9 @@ void VTKOpenGLWidget::updateCrosshairLines(SliceView &view) {
 }
 
 void VTKOpenGLWidget::setCrosshairPosition(double x, double y, double z) {
-    double bounds[6];
-    m_image->GetBounds(bounds);
-    m_crosshair[0] = std::min(std::max(x, bounds[0]), bounds[1]);
-    m_crosshair[1] = std::min(std::max(y, bounds[2]), bounds[3]);
-    m_crosshair[2] = std::min(std::max(z, bounds[4]), bounds[5]);
+    m_crosshair[0] = std::min(std::max(x, m_worldBounds[0]), m_worldBounds[1]);
+    m_crosshair[1] = std::min(std::max(y, m_worldBounds[2]), m_worldBounds[3]);
+    m_crosshair[2] = std::min(std::max(z, m_worldBounds[4]), m_worldBounds[5]);
 
     for (int i = 0; i < 3; ++i) {
         updateResliceOrigin(m_views[i]);

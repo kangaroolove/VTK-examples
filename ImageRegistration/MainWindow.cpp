@@ -46,9 +46,10 @@ void MainWindow::openFixedImage() {
     if (fileName.isEmpty())
         return;
 
-    // TODO: load the selected fixed image into the slice views.
-    QMessageBox::information(this, tr("Open Fixed Image"),
-                             tr("Image loading is not implemented yet:\n%1").arg(fileName));
+    QString error;
+    if (!m_vtkWidget->loadImage(fileName, error)) {
+        QMessageBox::warning(this, tr("Open Fixed Image"), error);
+    }
 }
 
 void MainWindow::openMovingImage() {
@@ -56,13 +57,16 @@ void MainWindow::openMovingImage() {
     if (fileName.isEmpty())
         return;
 
-    // TODO: load the selected moving image into the slice views.
-    QMessageBox::information(this, tr("Open Moving Image"),
-                             tr("Image loading is not implemented yet:\n%1").arg(fileName));
+    // TODO: overlay the moving image on the fixed one once registration is
+    // implemented; for now it simply replaces the displayed volume.
+    QString error;
+    if (!m_vtkWidget->loadImage(fileName, error)) {
+        QMessageBox::warning(this, tr("Open Moving Image"), error);
+    }
 }
 
 QString MainWindow::promptForImageFile(const QString &title) {
     return QFileDialog::getOpenFileName(
         this, title, QString(),
-        tr("Images (*.mhd *.mha *.nii *.nii.gz *.dcm);;All Files (*)"));
+        tr("NRRD Images (*.nrrd *.nhdr);;All Files (*)"));
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QString>
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkSmartPointer.h>
 
@@ -9,6 +10,7 @@ class vtkRenderer;
 class vtkImageData;
 class vtkImageReslice;
 class vtkLineSource;
+class vtkMatrix4x4;
 
 class VTKOpenGLWidget : public QVTKOpenGLNativeWidget {
 public:
@@ -20,7 +22,13 @@ public:
 
     VTKOpenGLWidget(QWidget *parent = nullptr);
 
-    // Crosshair position in image/world coordinates, shared by the three views.
+    // Loads a NRRD image and shows it in the three slice views. The volume is
+    // displayed in world coordinates (always LPS, as read by ITK), including
+    // any rotation stored in the file's direction cosines.
+    // Returns false and fills errorMessage on failure.
+    bool loadImage(const QString &fileName, QString &errorMessage);
+
+    // Crosshair position in world (LPS) coordinates, shared by the three views.
     void setCrosshairPosition(double x, double y, double z);
 
 protected:
@@ -38,6 +46,8 @@ private:
 
     void initialize();
     void createTestData();
+    void setImage(vtkImageData *image, vtkMatrix4x4 *imageToWorld);
+    void updateWorldBounds();
     void setupSliceView(SliceView &view, vtkImageData *image);
     void updateResliceOrigin(SliceView &view);
     void updateCrosshairLines(SliceView &view);
@@ -49,6 +59,8 @@ private:
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkImageData> m_image;
+    vtkSmartPointer<vtkMatrix4x4> m_imageToWorld; // image data coords -> LPS world
+    double m_worldBounds[6]; // axis-aligned bounds of the volume in world coords
     SliceView m_views[3]; // indexed by SliceOrientation
     double m_crosshair[3];
     int m_activeViewIndex; // view being dragged, -1 when none
