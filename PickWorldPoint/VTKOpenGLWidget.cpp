@@ -1,6 +1,7 @@
 #include "VTKOpenGLWidget.h"
 
 #include <vtkActor.h>
+#include <vtkAxesActor.h>
 #include <vtkCamera.h>
 #include <vtkConeSource.h>
 #include <vtkCoordinate.h>
@@ -104,13 +105,6 @@ void VTKOpenGLWidget::initialize() {
 }
 
 void VTKOpenGLWidget::createTestData() {
-    vtkNew<vtkConeSource> cone;
-
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputConnection(cone->GetOutputPort());
-
-    vtkNew<vtkActor> actor;
-    actor->SetMapper(mapper);
-
-    m_renderer->AddActor(actor);
+    vtkNew<vtkAxesActor> axesActor;
+    m_renderer->AddActor(axesActor);
 }
