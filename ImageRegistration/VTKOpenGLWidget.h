@@ -44,12 +44,23 @@ public:
     // Crosshair position in world (LPS) coordinates, shared by the three views.
     void setCrosshairPosition(double x, double y, double z);
 
+    // Records the current crosshair position as the registration landmark (the
+    // prostate center) for the given image. The user positions the crosshair on
+    // the prostate in that image -- adjusting opacity to see it -- and calls
+    // this. The fixed and moving landmarks initialize the registration so it
+    // starts already aligned at the prostate, which is fast and robust even when
+    // the two volumes are far apart. Returns false if the image is not loaded.
+    bool setProstateCenter(ImageRole role);
+    bool hasProstateCenter(ImageRole role) const;
+
     // Rigidly registers the moving image (MRI) onto the fixed image (ultrasound)
     // and repositions the moving layer so the two volumes overlay in world
-    // space. The registration is fully deterministic: it runs single-threaded
-    // with a fixed sampling pattern, so the same inputs always yield the same
-    // result. Both images must be loaded. Returns false and fills errorMessage
-    // on failure.
+    // space. If a prostate center has been set on both images, the registration
+    // is initialized from those landmarks; otherwise it falls back to aligning
+    // the volumes' geometric centers. The registration is fully deterministic:
+    // it runs with a fixed work-unit count and a fixed sampling pattern, so the
+    // same inputs and landmarks always yield the same result. Both images must
+    // be loaded. Returns false and fills errorMessage on failure.
     bool registerMovingToFixed(QString &errorMessage);
 
 protected:
@@ -94,4 +105,9 @@ private:
     SliceView m_views[3]; // indexed by SliceOrientation
     double m_crosshair[3];
     int m_activeViewIndex; // view being dragged, -1 when none
+
+    // Registration landmark (prostate center) per image, in that image's own
+    // physical coordinates, plus whether each has been set. Indexed by ImageRole.
+    double m_centers[2][3];
+    bool m_hasCenter[2];
 };

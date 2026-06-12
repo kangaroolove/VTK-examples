@@ -94,10 +94,15 @@ typedef itk::Image<float, 3> RegImageType;
 
 // Rigidly registers moving onto fixed using Mattes mutual information, which is
 // suited to multi-modal pairs such as ultrasound (fixed) and MRI (moving).
-// On success, fixedToMoving holds the optimized rigid transform as a 4x4
-// homogeneous matrix mapping fixed-image physical points to moving-image
-// physical points (both in LPS world coordinates).
+// When fixedCenter and movingCenter are both non-null (the prostate landmarks,
+// in each image's physical coordinates) the initial transform is the
+// translation that maps the fixed landmark onto the moving one, with the
+// rotation centered on the fixed landmark; otherwise the volumes' geometric
+// centers are aligned. On success, fixedToMoving holds the optimized rigid
+// transform as a 4x4 homogeneous matrix mapping fixed-image physical points to
+// moving-image physical points (both in LPS world coordinates).
 bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
+                          const double *fixedCenter, const double *movingCenter,
                           vtkMatrix4x4 *fixedToMoving, std::string &errorMessage) {
     typedef itk::VersorRigid3DTransform<double> TransformType;
     typedef itk::RegularStepGradientDescentOptimizerv4<double> OptimizerType;
@@ -116,17 +121,34 @@ bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
     // Fix the work-unit count so the threaded reduction is order-deterministic.
     metric->SetMaximumNumberOfWorkUnits(kRegistrationWorkUnits);
 
-    // Start from the transform that aligns the geometric centers of the two
-    // volumes, with no initial rotation.
+    // Build the initial transform (identity rotation in both cases).
     TransformType::Pointer initialTransform = TransformType::New();
-    typedef itk::CenteredTransformInitializer<TransformType, RegImageType, RegImageType>
-        InitializerType;
-    InitializerType::Pointer initializer = InitializerType::New();
-    initializer->SetTransform(initialTransform);
-    initializer->SetFixedImage(fixed);
-    initializer->SetMovingImage(moving);
-    initializer->GeometryOn();
-    initializer->InitializeTransform();
+    if (fixedCenter && movingCenter) {
+        // Landmark initialization: rotate about the fixed prostate center and
+        // translate it onto the moving prostate center. With identity rotation
+        // the transform then maps fixedCenter exactly onto movingCenter, so the
+        // optimizer starts already aligned at the prostate.
+        TransformType::InputPointType center;
+        TransformType::OutputVectorType translation;
+        for (int i = 0; i < 3; ++i) {
+            center[i] = fixedCenter[i];
+            translation[i] = movingCenter[i] - fixedCenter[i];
+        }
+        initialTransform->SetIdentity();
+        initialTransform->SetCenter(center);
+        initialTransform->SetTranslation(translation);
+    } else {
+        // Fall back to aligning the geometric centers of the two volumes.
+        typedef itk::CenteredTransformInitializer<TransformType, RegImageType,
+                                                  RegImageType>
+            InitializerType;
+        InitializerType::Pointer initializer = InitializerType::New();
+        initializer->SetTransform(initialTransform);
+        initializer->SetFixedImage(fixed);
+        initializer->SetMovingImage(moving);
+        initializer->GeometryOn();
+        initializer->InitializeTransform();
+    }
     registration->SetInitialTransform(initialTransform);
 
     // Scale the rotation and translation parameters consistently so a single
@@ -201,6 +223,8 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     m_opacities[FixedImage] = 1.0;
     // Semi-transparent by default so the fixed image shows through.
     m_opacities[MovingImage] = 0.5;
+    m_hasCenter[FixedImage] = false;
+    m_hasCenter[MovingImage] = false;
     for (int i = 0; i < 3; ++i) {
         m_views[i].renderer = vtkSmartPointer<vtkRenderer>::New();
         m_views[i].orientation = i;
@@ -551,6 +575,30 @@ void VTKOpenGLWidget::setCrosshairPosition(double x, double y, double z) {
     m_renderWindow->Render();
 }
 
+bool VTKOpenGLWidget::setProstateCenter(ImageRole role) {
+    if (!m_layers[role].image || !m_layers[role].imageToWorld) {
+        return false;
+    }
+    // The crosshair is in world coordinates; convert it to the image's own
+    // physical coordinates (which is what the registration works in) by
+    // inverting the layer's image-to-world matrix. This stays correct even if
+    // the moving image has already been repositioned by a previous registration.
+    vtkNew<vtkMatrix4x4> worldToImage;
+    vtkMatrix4x4::Invert(m_layers[role].imageToWorld, worldToImage);
+    const double world[4] = {m_crosshair[0], m_crosshair[1], m_crosshair[2], 1.0};
+    double physical[4];
+    worldToImage->MultiplyPoint(world, physical);
+    m_centers[role][0] = physical[0];
+    m_centers[role][1] = physical[1];
+    m_centers[role][2] = physical[2];
+    m_hasCenter[role] = true;
+    return true;
+}
+
+bool VTKOpenGLWidget::hasProstateCenter(ImageRole role) const {
+    return m_hasCenter[role];
+}
+
 bool VTKOpenGLWidget::registerMovingToFixed(QString &errorMessage) {
     RegImageType *fixed = m_layers[FixedImage].itkImage;
     RegImageType *moving = m_layers[MovingImage].itkImage;
@@ -559,6 +607,13 @@ bool VTKOpenGLWidget::registerMovingToFixed(QString &errorMessage) {
                           "must be loaded before registering.");
         return false;
     }
+
+    // Use the prostate landmarks only when both have been set; otherwise let the
+    // registration fall back to aligning the geometric centers.
+    const double *fixedCenter =
+        m_hasCenter[FixedImage] ? m_centers[FixedImage] : nullptr;
+    const double *movingCenter =
+        m_hasCenter[MovingImage] ? m_centers[MovingImage] : nullptr;
 
     // Pin the work-unit count to a fixed value (rather than the hardware
     // default) for the duration. This keeps the threaded floating-point
@@ -571,8 +626,8 @@ bool VTKOpenGLWidget::registerMovingToFixed(QString &errorMessage) {
 
     vtkNew<vtkMatrix4x4> fixedToMoving;
     std::string regError;
-    const bool ok =
-        runRigidRegistration(fixed, moving, fixedToMoving, regError);
+    const bool ok = runRigidRegistration(fixed, moving, fixedCenter, movingCenter,
+                                         fixedToMoving, regError);
 
     itk::MultiThreaderBase::SetGlobalDefaultNumberOfThreads(previousThreads);
 

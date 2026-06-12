@@ -12,6 +12,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QSlider>
+#include <QStatusBar>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_vtkWidget(new VTKOpenGLWidget(this)),
@@ -39,6 +40,18 @@ void MainWindow::createMenus() {
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
     QMenu *registrationMenu = menuBar()->addMenu(tr("&Registration"));
+
+    QAction *fixedCenterAction = registrationMenu->addAction(
+        tr("Set Prostate Center on &Fixed (Ultrasound)"));
+    connect(fixedCenterAction, &QAction::triggered, this,
+            &MainWindow::setFixedProstateCenter);
+
+    QAction *movingCenterAction = registrationMenu->addAction(
+        tr("Set Prostate Center on &Moving (MRI)"));
+    connect(movingCenterAction, &QAction::triggered, this,
+            &MainWindow::setMovingProstateCenter);
+
+    registrationMenu->addSeparator();
 
     QAction *rigidAction = registrationMenu->addAction(tr("&Rigid (Ultrasound \xe2\x86\x90 MRI)"));
     rigidAction->setShortcut(Qt::CTRL + Qt::Key_R);
@@ -119,19 +132,53 @@ void MainWindow::showOpacityDialog() {
     m_opacityDialog->activateWindow();
 }
 
+void MainWindow::setFixedProstateCenter() {
+    if (m_vtkWidget->setProstateCenter(VTKOpenGLWidget::FixedImage)) {
+        statusBar()->showMessage(
+            tr("Fixed (ultrasound) prostate center set at the crosshair."), 4000);
+    } else {
+        QMessageBox::warning(
+            this, tr("Set Prostate Center"),
+            tr("Load the fixed (ultrasound) image first, then place the "
+               "crosshair on the prostate."));
+    }
+}
+
+void MainWindow::setMovingProstateCenter() {
+    if (m_vtkWidget->setProstateCenter(VTKOpenGLWidget::MovingImage)) {
+        statusBar()->showMessage(
+            tr("Moving (MRI) prostate center set at the crosshair."), 4000);
+    } else {
+        QMessageBox::warning(
+            this, tr("Set Prostate Center"),
+            tr("Load the moving (MRI) image first, then place the crosshair on "
+               "the prostate."));
+    }
+}
+
 void MainWindow::registerImages() {
-    // The registration is single-threaded for reproducibility and may take a
-    // while, so show a wait cursor while it runs.
+    const bool usedLandmarks =
+        m_vtkWidget->hasProstateCenter(VTKOpenGLWidget::FixedImage) &&
+        m_vtkWidget->hasProstateCenter(VTKOpenGLWidget::MovingImage);
+
+    // Registration may take a moment, so show a wait cursor while it runs.
     QApplication::setOverrideCursor(Qt::WaitCursor);
     QString error;
     const bool ok = m_vtkWidget->registerMovingToFixed(error);
     QApplication::restoreOverrideCursor();
 
     if (ok) {
+        const QString detail =
+            usedLandmarks
+                ? tr("Started from the prostate centers you selected.")
+                : tr("No prostate centers were selected, so the volumes' "
+                     "geometric centers were aligned first. For a faster and "
+                     "more robust result, set a prostate center on each image.");
         QMessageBox::information(
             this, tr("Rigid Registration"),
             tr("Registration finished. The moving image (MRI) has been aligned "
-               "to the fixed image (ultrasound)."));
+               "to the fixed image (ultrasound).\n\n%1")
+                .arg(detail));
     } else {
         QMessageBox::warning(this, tr("Rigid Registration"), error);
     }

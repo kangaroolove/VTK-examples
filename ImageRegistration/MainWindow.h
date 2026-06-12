@@ -16,6 +16,8 @@ private:
     void openFixedImage();
     void openMovingImage();
     void showOpacityDialog();
+    void setFixedProstateCenter();
+    void setMovingProstateCenter();
     void registerImages();
     QString promptForImageFile(const QString &title);
 
