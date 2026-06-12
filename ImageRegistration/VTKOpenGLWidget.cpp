@@ -96,20 +96,7 @@ void VTKOpenGLWidget::initialize() {
     GetInteractor()->SetInteractorStyle(style);
 }
 
-void VTKOpenGLWidget::createTestData() {
-    // Placeholder volume until a real medical image is loaded.
-    // Different radii per axis so the three views look different.
-    vtkNew<vtkImageEllipsoidSource> ellipsoid;
-    ellipsoid->SetWholeExtent(0, 99, 0, 99, 0, 99);
-    ellipsoid->SetCenter(50.0, 50.0, 50.0);
-    ellipsoid->SetRadius(40.0, 25.0, 15.0);
-    ellipsoid->SetInValue(255.0);
-    ellipsoid->SetOutValue(0.0);
-    ellipsoid->Update();
-
-    vtkNew<vtkMatrix4x4> identity;
-    setImage(ellipsoid->GetOutput(), identity);
-}
+void VTKOpenGLWidget::createTestData() {}
 
 bool VTKOpenGLWidget::loadImage(const QString &fileName, QString &errorMessage) {
     typedef itk::Image<float, 3> ImageType;
