@@ -3,13 +3,19 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QDialog>
 #include <QFileDialog>
+#include <QFormLayout>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QSlider>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), m_vtkWidget(new VTKOpenGLWidget(this)) {
+    : QMainWindow(parent), m_vtkWidget(new VTKOpenGLWidget(this)),
+      m_opacityDialog(nullptr) {
     setWindowTitle(tr("Image Registration"));
     setCentralWidget(m_vtkWidget);
     createMenus();
@@ -32,6 +38,11 @@ void MainWindow::createMenus() {
     exitAction->setShortcut(QKeySequence::Quit);
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
+    QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
+
+    QAction *opacityAction = viewMenu->addAction(tr("&Opacity..."));
+    connect(opacityAction, &QAction::triggered, this, &MainWindow::showOpacityDialog);
+
     QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
 
     QAction *aboutAction = helpMenu->addAction(tr("&About"));
@@ -47,7 +58,7 @@ void MainWindow::openFixedImage() {
         return;
 
     QString error;
-    if (!m_vtkWidget->loadImage(fileName, error)) {
+    if (!m_vtkWidget->loadImage(fileName, VTKOpenGLWidget::FixedImage, error)) {
         QMessageBox::warning(this, tr("Open Fixed Image"), error);
     }
 }
@@ -57,12 +68,49 @@ void MainWindow::openMovingImage() {
     if (fileName.isEmpty())
         return;
 
-    // TODO: overlay the moving image on the fixed one once registration is
-    // implemented; for now it simply replaces the displayed volume.
     QString error;
-    if (!m_vtkWidget->loadImage(fileName, error)) {
+    if (!m_vtkWidget->loadImage(fileName, VTKOpenGLWidget::MovingImage, error)) {
         QMessageBox::warning(this, tr("Open Moving Image"), error);
     }
+}
+
+void MainWindow::showOpacityDialog() {
+    if (!m_opacityDialog) {
+        m_opacityDialog = new QDialog(this);
+        m_opacityDialog->setWindowTitle(tr("Image Opacity"));
+
+        QFormLayout *form = new QFormLayout(m_opacityDialog);
+        const auto addOpacityRow = [this, form](const QString &label,
+                                                VTKOpenGLWidget::ImageRole role) {
+            QSlider *slider = new QSlider(Qt::Horizontal);
+            slider->setRange(0, 100);
+            slider->setValue(qRound(m_vtkWidget->imageOpacity(role) * 100.0));
+            slider->setMinimumWidth(180);
+
+            QLabel *value = new QLabel(tr("%1%").arg(slider->value()));
+            value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            // Wide enough for "100%" so the slider does not shift as it moves.
+            value->setMinimumWidth(value->fontMetrics().horizontalAdvance(
+                QStringLiteral("100%")));
+
+            connect(slider, &QSlider::valueChanged, this,
+                    [this, role, value](int percent) {
+                        value->setText(tr("%1%").arg(percent));
+                        m_vtkWidget->setImageOpacity(role, percent / 100.0);
+                    });
+
+            QHBoxLayout *row = new QHBoxLayout;
+            row->addWidget(slider);
+            row->addWidget(value);
+            form->addRow(label, row);
+        };
+
+        addOpacityRow(tr("Fixed image:"), VTKOpenGLWidget::FixedImage);
+        addOpacityRow(tr("Moving image:"), VTKOpenGLWidget::MovingImage);
+    }
+    m_opacityDialog->show();
+    m_opacityDialog->raise();
+    m_opacityDialog->activateWindow();
 }
 
 QString MainWindow::promptForImageFile(const QString &title) {

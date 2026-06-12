@@ -47,6 +47,10 @@ const double kResliceAxes[3][9] = {
 // Crosshair lines lie slightly above the slice so they are always visible.
 const double kCrosshairZ = 1.0;
 
+// The moving image sits slightly above the fixed one so the blending order is
+// deterministic and there is no z-fighting between the two slices.
+const double kMovingImageZ = 0.1;
+
 // Each plane has a fixed color; a view draws the lines of the two other planes.
 const double kPlaneColors[3][3] = {
     {1.0, 1.0, 0.0}, // Sagittal: yellow
@@ -71,6 +75,9 @@ VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
     : QVTKOpenGLNativeWidget(parent),
       m_renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New()),
       m_activeViewIndex(-1) {
+    m_opacities[FixedImage] = 1.0;
+    // Semi-transparent by default so the fixed image shows through.
+    m_opacities[MovingImage] = 0.5;
     for (int i = 0; i < 3; ++i) {
         m_views[i].renderer = vtkSmartPointer<vtkRenderer>::New();
         m_views[i].orientation = i;
@@ -100,7 +107,8 @@ void VTKOpenGLWidget::initialize() {
 
 void VTKOpenGLWidget::createTestData() {}
 
-bool VTKOpenGLWidget::loadImage(const QString &fileName, QString &errorMessage) {
+bool VTKOpenGLWidget::loadImage(const QString &fileName, ImageRole role,
+                                QString &errorMessage) {
     typedef itk::Image<float, 3> ImageType;
 
     const std::string path = fileName.toStdString();
@@ -168,14 +176,15 @@ bool VTKOpenGLWidget::loadImage(const QString &fileName, QString &errorMessage) 
     vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
     image->DeepCopy(connector->GetOutput());
 
-    setImage(image, imageToWorld);
+    setImage(role, image, imageToWorld);
     m_renderWindow->Render();
     return true;
 }
 
-void VTKOpenGLWidget::setImage(vtkImageData *image, vtkMatrix4x4 *imageToWorld) {
-    m_image = image;
-    m_imageToWorld = imageToWorld;
+void VTKOpenGLWidget::setImage(ImageRole role, vtkImageData *image,
+                               vtkMatrix4x4 *imageToWorld) {
+    m_layers[role].image = image;
+    m_layers[role].imageToWorld = imageToWorld;
     updateWorldBounds();
 
     m_crosshair[0] = 0.5 * (m_worldBounds[0] + m_worldBounds[1]);
@@ -183,75 +192,141 @@ void VTKOpenGLWidget::setImage(vtkImageData *image, vtkMatrix4x4 *imageToWorld) 
     m_crosshair[2] = 0.5 * (m_worldBounds[4] + m_worldBounds[5]);
 
     for (int i = 0; i < 3; ++i) {
-        setupSliceView(m_views[i], m_image);
+        setupSliceView(m_views[i]);
     }
 }
 
-void VTKOpenGLWidget::updateWorldBounds() {
-    double imageBounds[6];
-    m_image->GetBounds(imageBounds);
+bool VTKOpenGLWidget::hasImage() const {
+    return m_layers[FixedImage].image || m_layers[MovingImage].image;
+}
 
-    // World bounds are the axis-aligned box around the eight transformed
-    // corners of the image-space bounding box.
-    for (int corner = 0; corner < 8; ++corner) {
-        const double point[4] = {imageBounds[corner & 1],
-                                 imageBounds[2 + ((corner >> 1) & 1)],
-                                 imageBounds[4 + ((corner >> 2) & 1)], 1.0};
-        double world[4];
-        m_imageToWorld->MultiplyPoint(point, world);
-        for (int axis = 0; axis < 3; ++axis) {
-            if (corner == 0) {
-                m_worldBounds[2 * axis] = world[axis];
-                m_worldBounds[2 * axis + 1] = world[axis];
-            } else {
-                m_worldBounds[2 * axis] = std::min(m_worldBounds[2 * axis], world[axis]);
-                m_worldBounds[2 * axis + 1] = std::max(m_worldBounds[2 * axis + 1], world[axis]);
+void VTKOpenGLWidget::setImageOpacity(ImageRole role, double opacity) {
+    m_opacities[role] = std::min(std::max(opacity, 0.0), 1.0);
+    for (int i = 0; i < 3; ++i) {
+        if (m_views[i].actors[role]) {
+            m_views[i].actors[role]->GetProperty()->SetOpacity(m_opacities[role]);
+        }
+    }
+    m_renderWindow->Render();
+}
+
+double VTKOpenGLWidget::imageOpacity(ImageRole role) const {
+    return m_opacities[role];
+}
+
+void VTKOpenGLWidget::updateWorldBounds() {
+    // World bounds are the axis-aligned box around the transformed corners of
+    // every loaded volume's image-space bounding box.
+    bool first = true;
+    for (int layer = 0; layer < 2; ++layer) {
+        vtkImageData *image = m_layers[layer].image;
+        if (!image) {
+            continue;
+        }
+        double imageBounds[6];
+        image->GetBounds(imageBounds);
+
+        for (int corner = 0; corner < 8; ++corner) {
+            const double point[4] = {imageBounds[corner & 1],
+                                     imageBounds[2 + ((corner >> 1) & 1)],
+                                     imageBounds[4 + ((corner >> 2) & 1)], 1.0};
+            double world[4];
+            m_layers[layer].imageToWorld->MultiplyPoint(point, world);
+            for (int axis = 0; axis < 3; ++axis) {
+                if (first) {
+                    m_worldBounds[2 * axis] = world[axis];
+                    m_worldBounds[2 * axis + 1] = world[axis];
+                } else {
+                    m_worldBounds[2 * axis] = std::min(m_worldBounds[2 * axis], world[axis]);
+                    m_worldBounds[2 * axis + 1] = std::max(m_worldBounds[2 * axis + 1], world[axis]);
+                }
             }
+            first = false;
         }
     }
 }
 
-void VTKOpenGLWidget::setupSliceView(SliceView &view, vtkImageData *image) {
+void VTKOpenGLWidget::setupSliceView(SliceView &view) {
     // A new image replaces the previous slice and crosshair actors.
     view.renderer->RemoveAllViewProps();
 
-    view.reslice = vtkSmartPointer<vtkImageReslice>::New();
-    view.reslice->SetInputData(image);
-    view.reslice->SetOutputDimensionality(2);
-    const double *axes = kResliceAxes[view.orientation];
-    view.reslice->SetResliceAxesDirectionCosines(axes[0], axes[1], axes[2],
-                                                 axes[3], axes[4], axes[5],
-                                                 axes[6], axes[7], axes[8]);
+    for (int layer = 0; layer < 2; ++layer) {
+        view.reslices[layer] = nullptr;
+        view.actors[layer] = nullptr;
 
-    // The reslice axes are world-aligned (LPS) planes; the reslice transform
-    // maps those world coordinates into the image's own grid, applying the
-    // volume's rotation and origin.
-    vtkNew<vtkMatrix4x4> worldToImage;
-    vtkMatrix4x4::Invert(m_imageToWorld, worldToImage);
-    vtkNew<vtkTransform> resliceTransform;
-    resliceTransform->SetMatrix(worldToImage);
-    view.reslice->SetResliceTransform(resliceTransform);
-    view.reslice->AutoCropOutputOn();
-    view.reslice->SetInterpolationModeToLinear();
+        vtkImageData *image = m_layers[layer].image;
+        if (!image) {
+            continue;
+        }
 
-    double range[2];
-    image->GetScalarRange(range);
-    if (range[1] <= range[0]) {
-        range[1] = range[0] + 1.0;
+        vtkSmartPointer<vtkImageReslice> reslice =
+            vtkSmartPointer<vtkImageReslice>::New();
+        reslice->SetInputData(image);
+        reslice->SetOutputDimensionality(2);
+        const double *axes = kResliceAxes[view.orientation];
+        reslice->SetResliceAxesDirectionCosines(axes[0], axes[1], axes[2],
+                                                axes[3], axes[4], axes[5],
+                                                axes[6], axes[7], axes[8]);
+
+        // The reslice axes are world-aligned (LPS) planes; the reslice
+        // transform maps those world coordinates into the image's own grid,
+        // applying the volume's rotation and origin.
+        vtkNew<vtkMatrix4x4> worldToImage;
+        vtkMatrix4x4::Invert(m_layers[layer].imageToWorld, worldToImage);
+        vtkNew<vtkTransform> resliceTransform;
+        resliceTransform->SetMatrix(worldToImage);
+        reslice->SetResliceTransform(resliceTransform);
+        reslice->AutoCropOutputOn();
+        reslice->SetInterpolationModeToLinear();
+
+        double range[2];
+        image->GetScalarRange(range);
+        if (range[1] <= range[0]) {
+            range[1] = range[0] + 1.0;
+        }
+        reslice->SetBackgroundLevel(range[0]);
+        view.reslices[layer] = reslice;
+
+        vtkSmartPointer<vtkImageActor> actor =
+            vtkSmartPointer<vtkImageActor>::New();
+        actor->GetMapper()->SetInputConnection(reslice->GetOutputPort());
+        actor->GetProperty()->SetColorWindow(range[1] - range[0]);
+        actor->GetProperty()->SetColorLevel(0.5 * (range[0] + range[1]));
+        actor->GetProperty()->SetOpacity(m_opacities[layer]);
+        if (layer == MovingImage) {
+            actor->SetPosition(0.0, 0.0, kMovingImageZ);
+        }
+        view.actors[layer] = actor;
+        view.renderer->AddViewProp(actor);
     }
-    view.reslice->SetBackgroundLevel(range[0]);
+
     updateResliceOrigin(view);
 
     // The in-plane components of the reslice origin never change, so these
-    // bounds stay valid as the crosshair moves.
-    view.reslice->Update();
-    view.reslice->GetOutput()->GetBounds(view.bounds);
-
-    vtkNew<vtkImageActor> actor;
-    actor->GetMapper()->SetInputConnection(view.reslice->GetOutputPort());
-    actor->GetProperty()->SetColorWindow(range[1] - range[0]);
-    actor->GetProperty()->SetColorLevel(0.5 * (range[0] + range[1]));
-    view.renderer->AddViewProp(actor);
+    // bounds stay valid as the crosshair moves. With both images loaded the
+    // view covers the union of their slice bounds.
+    bool first = true;
+    for (int layer = 0; layer < 2; ++layer) {
+        if (!view.reslices[layer]) {
+            continue;
+        }
+        view.reslices[layer]->Update();
+        double bounds[6];
+        view.reslices[layer]->GetOutput()->GetBounds(bounds);
+        for (int i = 0; i < 6; i += 2) {
+            if (first) {
+                view.bounds[i] = bounds[i];
+                view.bounds[i + 1] = bounds[i + 1];
+            } else {
+                view.bounds[i] = std::min(view.bounds[i], bounds[i]);
+                view.bounds[i + 1] = std::max(view.bounds[i + 1], bounds[i + 1]);
+            }
+        }
+        first = false;
+    }
+    if (first) {
+        return; // no image loaded
+    }
 
     // Lines are colored by the plane they represent in this view.
     int horizontalPlane = 0;
@@ -287,16 +362,23 @@ void VTKOpenGLWidget::setupSliceView(SliceView &view, vtkImageData *image) {
 }
 
 void VTKOpenGLWidget::updateResliceOrigin(SliceView &view) {
+    double origin[3] = {0.0, 0.0, 0.0};
     switch (view.orientation) {
     case Sagittal:
-        view.reslice->SetResliceAxesOrigin(m_crosshair[0], 0.0, 0.0);
+        origin[0] = m_crosshair[0];
         break;
     case Coronal:
-        view.reslice->SetResliceAxesOrigin(0.0, m_crosshair[1], 0.0);
+        origin[1] = m_crosshair[1];
         break;
     case Transverse:
-        view.reslice->SetResliceAxesOrigin(0.0, 0.0, m_crosshair[2]);
+        origin[2] = m_crosshair[2];
         break;
+    }
+    for (int layer = 0; layer < 2; ++layer) {
+        if (view.reslices[layer]) {
+            view.reslices[layer]->SetResliceAxesOrigin(origin[0], origin[1],
+                                                       origin[2]);
+        }
     }
 }
 
@@ -330,7 +412,7 @@ void VTKOpenGLWidget::updateCrosshairLines(SliceView &view) {
 }
 
 void VTKOpenGLWidget::setCrosshairPosition(double x, double y, double z) {
-    if (!m_image) {
+    if (!hasImage()) {
         return;
     }
     m_crosshair[0] = std::min(std::max(x, m_worldBounds[0]), m_worldBounds[1]);
@@ -363,7 +445,7 @@ bool VTKOpenGLWidget::event(QEvent *event) {
 
 bool VTKOpenGLWidget::handleCrosshairMouseEvent(QMouseEvent *event) {
     // No image means no slice views or crosshair to interact with.
-    if (!m_image) {
+    if (!hasImage()) {
         return false;
     }
     if (event->type() == QEvent::MouseButtonPress) {
