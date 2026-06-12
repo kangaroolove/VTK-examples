@@ -127,17 +127,21 @@ bool VTKOpenGLWidget::loadImage(const QString &fileName, QString &errorMessage) 
 
     ImageType::Pointer itkImage = reader->GetOutput();
 
-    // vtkImageData cannot store direction cosines, so keep the voxel grid in
-    // axis-aligned image coordinates (spacing only) and carry rotation and
-    // origin in a separate image-to-world matrix.
+    // The vtkImageData keeps the file's origin and spacing, but it cannot
+    // store direction cosines, so the rotation is carried in a separate
+    // image-to-world matrix: world = D * (p - origin) + origin. With an
+    // identity direction the matrix is identity and image coordinates are
+    // already world (LPS) coordinates.
     const ImageType::DirectionType direction = itkImage->GetDirection();
     const ImageType::PointType origin = itkImage->GetOrigin();
     vtkNew<vtkMatrix4x4> imageToWorld;
     for (int row = 0; row < 3; ++row) {
+        double translation = origin[row];
         for (int col = 0; col < 3; ++col) {
             imageToWorld->SetElement(row, col, direction(row, col));
+            translation -= direction(row, col) * origin[col];
         }
-        imageToWorld->SetElement(row, 3, origin[row]);
+        imageToWorld->SetElement(row, 3, translation);
     }
 
     typedef itk::ImageToVTKImageFilter<ImageType> ConnectorType;
@@ -147,7 +151,6 @@ bool VTKOpenGLWidget::loadImage(const QString &fileName, QString &errorMessage) 
 
     vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
     image->DeepCopy(connector->GetOutput());
-    image->SetOrigin(0.0, 0.0, 0.0); // origin lives in imageToWorld
 
     setImage(image, imageToWorld);
     m_renderWindow->Render();
@@ -265,7 +268,9 @@ void VTKOpenGLWidget::setupSliceView(SliceView &view, vtkImageData *image) {
     camera->SetFocalPoint(centerX, centerY, 0.0);
     camera->SetPosition(centerX, centerY, 500.0);
     camera->SetViewUp(0.0, 1.0, 0.0);
-    view.renderer->ResetCamera();
+    // Reset against the slice bounds (not all props) so the camera is
+    // centered on and fitted to the image itself.
+    view.renderer->ResetCamera(view.bounds);
 }
 
 void VTKOpenGLWidget::updateResliceOrigin(SliceView &view) {
