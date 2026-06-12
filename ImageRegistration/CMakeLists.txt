@@ -11,13 +11,15 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(VTK COMPONENTS   
+find_package(VTK COMPONENTS
   vtkCommonCore
   vtkViewsQt
   vtkIOGeometry
   vtkInteractionStyle
   vtkRenderingImage
   vtkImagingSources
+  vtkImagingCore
+  vtkFiltersSources
 )
 
 include(${VTK_USE_FILE})
