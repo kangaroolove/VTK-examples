@@ -33,14 +33,15 @@
 namespace {
 
 // Reslice axes direction cosines (view x, view y, slice normal) per orientation.
-// View coordinates of a world point p:
-//   Sagittal:   (p.y, p.z), slicing along world X
-//   Coronal:    (p.x, p.z), slicing along world Y
-//   Transverse: (p.x, p.y), slicing along world Z
+// The camera looks along -normal with view y up, giving the radiological
+// display convention (world is LPS):
+//   Sagittal:   (p.y, p.z),  viewed from the left,  anterior on screen left
+//   Coronal:    (p.x, p.z),  viewed from the front, patient left on screen right
+//   Transverse: (p.x, -p.y), viewed from the feet,  anterior at screen top
 const double kResliceAxes[3][9] = {
-    {0, 1, 0, 0, 0, 1, 1, 0, 0},  // Sagittal
-    {1, 0, 0, 0, 0, 1, 0, -1, 0}, // Coronal
-    {1, 0, 0, 0, 1, 0, 0, 0, 1},  // Transverse
+    {0, 1, 0, 0, 0, 1, 1, 0, 0},   // Sagittal
+    {1, 0, 0, 0, 0, 1, 0, -1, 0},  // Coronal
+    {1, 0, 0, 0, -1, 0, 0, 0, -1}, // Transverse
 };
 
 // Crosshair lines lie slightly above the slice so they are always visible.
@@ -283,9 +284,6 @@ void VTKOpenGLWidget::setupSliceView(SliceView &view, vtkImageData *image) {
     camera->SetFocalPoint(centerX, centerY, 0.0);
     camera->SetPosition(centerX, centerY, 500.0);
     camera->SetViewUp(0.0, 1.0, 0.0);
-    // Reset against the slice bounds (not all props) so the camera is
-    // centered on and fitted to the image itself.
-    view.renderer->ResetCamera(view.bounds);
 }
 
 void VTKOpenGLWidget::updateResliceOrigin(SliceView &view) {
@@ -315,7 +313,7 @@ void VTKOpenGLWidget::crosshairToViewCoords(const SliceView &view, double &x,
         break;
     case Transverse:
         x = m_crosshair[0];
-        y = m_crosshair[1];
+        y = -m_crosshair[1];
         break;
     }
 }
@@ -447,7 +445,7 @@ void VTKOpenGLWidget::moveCrosshairToDisplayPoint(int x, int y) {
         break;
     case Transverse:
         pos[0] = world[0];
-        pos[1] = world[1];
+        pos[1] = -world[1];
         break;
     }
     setCrosshairPosition(pos[0], pos[1], pos[2]);
