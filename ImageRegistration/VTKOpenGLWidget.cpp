@@ -26,6 +26,7 @@
 #include <itkImageFileReader.h>
 #include <itkImageToVTKImageFilter.h>
 #include <itkNrrdImageIO.h>
+#include <itkOrientImageFilter.h>
 
 #include <algorithm>
 
@@ -110,14 +111,28 @@ bool VTKOpenGLWidget::loadImage(const QString &fileName, QString &errorMessage) 
         return false;
     }
 
-    // ITK converts whatever space the NRRD header declares (RAS, LAS, ...)
-    // to LPS, so the origin and direction below are always in LPS.
+    // ITK converts the anatomical spaces a NRRD header can declare (RAS,
+    // LAS, ...) to LPS world coordinates, so origin and direction are
+    // expressed in LPS after reading.
     itk::ImageFileReader<ImageType>::Pointer reader =
         itk::ImageFileReader<ImageType>::New();
     reader->SetImageIO(io);
     reader->SetFileName(path);
+
+    // The world coordinates are LPS, but the voxel grid still uses the
+    // file's own axis order, so the direction matrix may hold axis flips
+    // and permutations (e.g. an RAS-ordered file reads with direction
+    // diag(-1,-1,1)). Reorient the voxels so the grid axes follow LPS;
+    // afterwards the direction is identity unless the scan is oblique.
+    ImageType::DirectionType lpsDirection;
+    lpsDirection.SetIdentity();
+    typedef itk::OrientImageFilter<ImageType, ImageType> OrientFilterType;
+    OrientFilterType::Pointer orienter = OrientFilterType::New();
+    orienter->UseImageDirectionOn();
+    orienter->SetDesiredCoordinateDirection(lpsDirection);
+    orienter->SetInput(reader->GetOutput());
     try {
-        reader->Update();
+        orienter->Update();
     } catch (itk::ExceptionObject &e) {
         errorMessage = tr("Failed to read image:\n%1\n%2")
                            .arg(fileName)
@@ -125,7 +140,7 @@ bool VTKOpenGLWidget::loadImage(const QString &fileName, QString &errorMessage) 
         return false;
     }
 
-    ImageType::Pointer itkImage = reader->GetOutput();
+    ImageType::Pointer itkImage = orienter->GetOutput();
 
     // The vtkImageData keeps the file's origin and spacing, but it cannot
     // store direction cosines, so the rotation is carried in a separate

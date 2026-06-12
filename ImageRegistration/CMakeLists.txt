@@ -28,6 +28,7 @@ include(${VTK_USE_FILE})
 find_package(ITK REQUIRED
   COMPONENTS
   ITKCommon
+  ITKImageGrid
   ITKIOImageBase
   ITKIOGDCM
   ITKIONRRD
