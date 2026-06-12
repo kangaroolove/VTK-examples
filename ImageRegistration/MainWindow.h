@@ -16,6 +16,7 @@ private:
     void openFixedImage();
     void openMovingImage();
     void showOpacityDialog();
+    void registerImages();
     QString promptForImageFile(const QString &title);
 
     VTKOpenGLWidget *m_vtkWidget;

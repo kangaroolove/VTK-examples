@@ -28,6 +28,14 @@
 #include <itkNrrdImageIO.h>
 #include <itkOrientImageFilter.h>
 
+#include <itkCenteredTransformInitializer.h>
+#include <itkImageRegistrationMethodv4.h>
+#include <itkMattesMutualInformationImageToImageMetricv4.h>
+#include <itkMultiThreaderBase.h>
+#include <itkRegistrationParameterScalesFromPhysicalShift.h>
+#include <itkRegularStepGradientDescentOptimizerv4.h>
+#include <itkVersorRigid3DTransform.h>
+
 #include <algorithm>
 
 namespace {
@@ -67,6 +75,121 @@ vtkSmartPointer<vtkActor> createLineActor(vtkLineSource *line, const double colo
     actor->GetProperty()->SetColor(color[0], color[1], color[2]);
     actor->GetProperty()->SetLineWidth(1.5);
     return actor;
+}
+
+// A fixed seed for the metric's point sampler. Combined with a regular
+// (non-random) sampling strategy and a fixed work-unit count, the registration
+// is fully reproducible: the same fixed/moving images always produce the same
+// transform.
+const int kRegistrationSeed = 121212;
+
+// The registration runs multi-threaded for speed, but with a *fixed* number of
+// work units rather than the hardware default. ITK v4 metrics split the sample
+// set into this many chunks and sum the per-chunk results in chunk order, so a
+// constant count makes the floating-point reduction order identical on every
+// run (and on every machine), which is what keeps the result reproducible.
+const int kRegistrationWorkUnits = 8;
+
+typedef itk::Image<float, 3> RegImageType;
+
+// Rigidly registers moving onto fixed using Mattes mutual information, which is
+// suited to multi-modal pairs such as ultrasound (fixed) and MRI (moving).
+// On success, fixedToMoving holds the optimized rigid transform as a 4x4
+// homogeneous matrix mapping fixed-image physical points to moving-image
+// physical points (both in LPS world coordinates).
+bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
+                          vtkMatrix4x4 *fixedToMoving, std::string &errorMessage) {
+    typedef itk::VersorRigid3DTransform<double> TransformType;
+    typedef itk::RegularStepGradientDescentOptimizerv4<double> OptimizerType;
+    typedef itk::MattesMutualInformationImageToImageMetricv4<RegImageType, RegImageType>
+        MetricType;
+    typedef itk::ImageRegistrationMethodv4<RegImageType, RegImageType, TransformType>
+        RegistrationType;
+
+    MetricType::Pointer metric = MetricType::New();
+    OptimizerType::Pointer optimizer = OptimizerType::New();
+    RegistrationType::Pointer registration = RegistrationType::New();
+    registration->SetMetric(metric);
+    registration->SetOptimizer(optimizer);
+
+    metric->SetNumberOfHistogramBins(50);
+    // Fix the work-unit count so the threaded reduction is order-deterministic.
+    metric->SetMaximumNumberOfWorkUnits(kRegistrationWorkUnits);
+
+    // Start from the transform that aligns the geometric centers of the two
+    // volumes, with no initial rotation.
+    TransformType::Pointer initialTransform = TransformType::New();
+    typedef itk::CenteredTransformInitializer<TransformType, RegImageType, RegImageType>
+        InitializerType;
+    InitializerType::Pointer initializer = InitializerType::New();
+    initializer->SetTransform(initialTransform);
+    initializer->SetFixedImage(fixed);
+    initializer->SetMovingImage(moving);
+    initializer->GeometryOn();
+    initializer->InitializeTransform();
+    registration->SetInitialTransform(initialTransform);
+
+    // Scale the rotation and translation parameters consistently so a single
+    // step length is meaningful for both.
+    typedef itk::RegistrationParameterScalesFromPhysicalShift<MetricType>
+        ScalesEstimatorType;
+    ScalesEstimatorType::Pointer scalesEstimator = ScalesEstimatorType::New();
+    scalesEstimator->SetMetric(metric);
+    scalesEstimator->SetTransformForward(true);
+    optimizer->SetScalesEstimator(scalesEstimator);
+
+    optimizer->SetLearningRate(0.2);
+    optimizer->SetMinimumStepLength(0.001);
+    optimizer->SetNumberOfIterations(100);
+    optimizer->SetRelaxationFactor(0.5);
+    optimizer->SetReturnBestParametersAndValue(true);
+    registration->SetNumberOfWorkUnits(kRegistrationWorkUnits);
+
+    // Deterministic sampling: a regular pattern (not random) covering 5% of the
+    // voxels, with a fixed seed for good measure. 5% is enough for mutual
+    // information to be stable while keeping each metric evaluation cheap.
+    registration->SetMetricSamplingStrategy(RegistrationType::REGULAR);
+    registration->SetMetricSamplingPercentage(0.05);
+    registration->MetricSamplingReinitializeSeed(kRegistrationSeed);
+
+    // Coarse-to-fine for a wider capture range.
+    const unsigned int numberOfLevels = 3;
+    RegistrationType::ShrinkFactorsArrayType shrinkFactors;
+    shrinkFactors.SetSize(numberOfLevels);
+    shrinkFactors[0] = 4;
+    shrinkFactors[1] = 2;
+    shrinkFactors[2] = 1;
+    RegistrationType::SmoothingSigmasArrayType smoothingSigmas;
+    smoothingSigmas.SetSize(numberOfLevels);
+    smoothingSigmas[0] = 2.0;
+    smoothingSigmas[1] = 1.0;
+    smoothingSigmas[2] = 0.0;
+    registration->SetNumberOfLevels(numberOfLevels);
+    registration->SetShrinkFactorsPerLevel(shrinkFactors);
+    registration->SetSmoothingSigmasPerLevel(smoothingSigmas);
+
+    registration->SetFixedImage(fixed);
+    registration->SetMovingImage(moving);
+
+    try {
+        registration->Update();
+    } catch (itk::ExceptionObject &e) {
+        errorMessage = e.GetDescription();
+        return false;
+    }
+
+    const TransformType *finalTransform = registration->GetTransform();
+    const TransformType::MatrixType matrix = finalTransform->GetMatrix();
+    const TransformType::OffsetType offset = finalTransform->GetOffset();
+
+    fixedToMoving->Identity();
+    for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 3; ++col) {
+            fixedToMoving->SetElement(row, col, matrix(row, col));
+        }
+        fixedToMoving->SetElement(row, 3, offset[row]);
+    }
+    return true;
 }
 
 } // namespace
@@ -177,6 +300,8 @@ bool VTKOpenGLWidget::loadImage(const QString &fileName, ImageRole role,
     image->DeepCopy(connector->GetOutput());
 
     setImage(role, image, imageToWorld);
+    // Keep the oriented ITK image (in LPS physical space) for registration.
+    m_layers[role].itkImage = itkImage;
     m_renderWindow->Render();
     return true;
 }
@@ -424,6 +549,60 @@ void VTKOpenGLWidget::setCrosshairPosition(double x, double y, double z) {
         updateCrosshairLines(m_views[i]);
     }
     m_renderWindow->Render();
+}
+
+bool VTKOpenGLWidget::registerMovingToFixed(QString &errorMessage) {
+    RegImageType *fixed = m_layers[FixedImage].itkImage;
+    RegImageType *moving = m_layers[MovingImage].itkImage;
+    if (!fixed || !moving) {
+        errorMessage = tr("Both a fixed (ultrasound) and a moving (MRI) image "
+                          "must be loaded before registering.");
+        return false;
+    }
+
+    // Pin the work-unit count to a fixed value (rather than the hardware
+    // default) for the duration. This keeps the threaded floating-point
+    // reductions in a fixed order -- so the result is identical on every run --
+    // while still running in parallel for speed. The previous setting is
+    // restored afterwards.
+    const itk::ThreadIdType previousThreads =
+        itk::MultiThreaderBase::GetGlobalDefaultNumberOfThreads();
+    itk::MultiThreaderBase::SetGlobalDefaultNumberOfThreads(kRegistrationWorkUnits);
+
+    vtkNew<vtkMatrix4x4> fixedToMoving;
+    std::string regError;
+    const bool ok =
+        runRigidRegistration(fixed, moving, fixedToMoving, regError);
+
+    itk::MultiThreaderBase::SetGlobalDefaultNumberOfThreads(previousThreads);
+
+    if (!ok) {
+        errorMessage = tr("Registration failed:\n%1")
+                           .arg(QString::fromStdString(regError));
+        return false;
+    }
+
+    // The registration transform T maps a fixed-image point to the
+    // corresponding moving-image point. A moving voxel currently shown at world
+    // point p therefore belongs at the fixed-aligned world point T^-1(p), so we
+    // pre-multiply the moving layer's image-to-world matrix by T^-1.
+    vtkNew<vtkMatrix4x4> movingToFixed;
+    vtkMatrix4x4::Invert(fixedToMoving, movingToFixed);
+
+    vtkNew<vtkMatrix4x4> alignedImageToWorld;
+    vtkMatrix4x4::Multiply4x4(movingToFixed, m_layers[MovingImage].imageToWorld,
+                              alignedImageToWorld);
+    m_layers[MovingImage].imageToWorld->DeepCopy(alignedImageToWorld);
+
+    // Rebuild the slice views with the repositioned moving image.
+    updateWorldBounds();
+    for (int i = 0; i < 3; ++i) {
+        setupSliceView(m_views[i]);
+    }
+    // Keep the crosshair inside the (possibly changed) world bounds.
+    setCrosshairPosition(m_crosshair[0], m_crosshair[1], m_crosshair[2]);
+    m_renderWindow->Render();
+    return true;
 }
 
 bool VTKOpenGLWidget::event(QEvent *event) {

@@ -38,6 +38,12 @@ void MainWindow::createMenus() {
     exitAction->setShortcut(QKeySequence::Quit);
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
+    QMenu *registrationMenu = menuBar()->addMenu(tr("&Registration"));
+
+    QAction *rigidAction = registrationMenu->addAction(tr("&Rigid (Ultrasound \xe2\x86\x90 MRI)"));
+    rigidAction->setShortcut(Qt::CTRL + Qt::Key_R);
+    connect(rigidAction, &QAction::triggered, this, &MainWindow::registerImages);
+
     QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
 
     QAction *opacityAction = viewMenu->addAction(tr("&Opacity..."));
@@ -111,6 +117,24 @@ void MainWindow::showOpacityDialog() {
     m_opacityDialog->show();
     m_opacityDialog->raise();
     m_opacityDialog->activateWindow();
+}
+
+void MainWindow::registerImages() {
+    // The registration is single-threaded for reproducibility and may take a
+    // while, so show a wait cursor while it runs.
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QString error;
+    const bool ok = m_vtkWidget->registerMovingToFixed(error);
+    QApplication::restoreOverrideCursor();
+
+    if (ok) {
+        QMessageBox::information(
+            this, tr("Rigid Registration"),
+            tr("Registration finished. The moving image (MRI) has been aligned "
+               "to the fixed image (ultrasound)."));
+    } else {
+        QMessageBox::warning(this, tr("Rigid Registration"), error);
+    }
 }
 
 QString MainWindow::promptForImageFile(const QString &title) {

@@ -4,6 +4,8 @@
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkSmartPointer.h>
 
+#include <itkImage.h>
+
 class QMouseEvent;
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
@@ -42,6 +44,14 @@ public:
     // Crosshair position in world (LPS) coordinates, shared by the three views.
     void setCrosshairPosition(double x, double y, double z);
 
+    // Rigidly registers the moving image (MRI) onto the fixed image (ultrasound)
+    // and repositions the moving layer so the two volumes overlay in world
+    // space. The registration is fully deterministic: it runs single-threaded
+    // with a fixed sampling pattern, so the same inputs always yield the same
+    // result. Both images must be loaded. Returns false and fills errorMessage
+    // on failure.
+    bool registerMovingToFixed(QString &errorMessage);
+
 protected:
     bool event(QEvent *event) override;
 
@@ -49,6 +59,8 @@ private:
     struct ImageLayer {
         vtkSmartPointer<vtkImageData> image;
         vtkSmartPointer<vtkMatrix4x4> imageToWorld; // image data coords -> LPS world
+        // Oriented ITK image in LPS physical space, kept for registration.
+        itk::Image<float, 3>::Pointer itkImage;
     };
 
     struct SliceView {

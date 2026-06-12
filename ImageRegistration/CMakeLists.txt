@@ -33,6 +33,12 @@ find_package(ITK REQUIRED
   ITKIOGDCM
   ITKIONRRD
   ITKVtkGlue
+  ITKTransform
+  ITKRegistrationCommon
+  ITKRegistrationMethodsv4
+  ITKOptimizersv4
+  ITKMetricsv4
+  ITKSmoothing
 )
 include(${ITK_USE_FILE})
 
