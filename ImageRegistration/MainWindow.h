@@ -12,7 +12,9 @@ public:
 
 private:
     void createMenus();
-    void openImage();
+    void openFixedImage();
+    void openMovingImage();
+    QString promptForImageFile(const QString &title);
 
     VTKOpenGLWidget *m_vtkWidget;
 };
