@@ -4,6 +4,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QDialog>
+#include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -12,6 +13,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QSlider>
+#include <QSpinBox>
 #include <QStatusBar>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -132,28 +134,62 @@ void MainWindow::showOpacityDialog() {
     m_opacityDialog->activateWindow();
 }
 
-void MainWindow::setFixedProstateCenter() {
-    if (m_vtkWidget->setProstateCenter(VTKOpenGLWidget::FixedImage)) {
-        statusBar()->showMessage(
-            tr("Fixed (ultrasound) prostate center set at the crosshair."), 4000);
-    } else {
+static void showProstateCenterDialog(MainWindow *win, VTKOpenGLWidget *widget,
+                                     VTKOpenGLWidget::ImageRole role,
+                                     const QString &imageLabel) {
+    int dims[3];
+    if (!widget->getImageDimensions(role, dims)) {
         QMessageBox::warning(
-            this, tr("Set Prostate Center"),
-            tr("Load the fixed (ultrasound) image first, then place the "
-               "crosshair on the prostate."));
+            win, MainWindow::tr("Set Prostate Center"),
+            MainWindow::tr("Load the %1 image first.").arg(imageLabel));
+        return;
     }
+
+    QDialog dlg(win);
+    dlg.setWindowTitle(MainWindow::tr("Set Prostate Center \xe2\x80\x94 %1 image").arg(imageLabel));
+    QFormLayout form(&dlg);
+
+    auto makeSpinBox = [&dlg](int maxVal) {
+        QSpinBox *sb = new QSpinBox(&dlg);
+        sb->setRange(0, maxVal - 1);
+        sb->setValue(maxVal / 2);
+        return sb;
+    };
+    QSpinBox *iBox = makeSpinBox(dims[0]);
+    QSpinBox *jBox = makeSpinBox(dims[1]);
+    QSpinBox *kBox = makeSpinBox(dims[2]);
+
+    form.addRow(MainWindow::tr("I  (0 \xe2\x80\x93 %1):").arg(dims[0] - 1), iBox);
+    form.addRow(MainWindow::tr("J  (0 \xe2\x80\x93 %1):").arg(dims[1] - 1), jBox);
+    form.addRow(MainWindow::tr("K  (0 \xe2\x80\x93 %1):").arg(dims[2] - 1), kBox);
+
+    QDialogButtonBox *buttons = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    form.addRow(buttons);
+
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    widget->setProstateCenter(role, iBox->value(), jBox->value(), kBox->value());
+    win->statusBar()->showMessage(
+        MainWindow::tr("Prostate center set on %1 image at IJK (%2, %3, %4).")
+            .arg(imageLabel)
+            .arg(iBox->value())
+            .arg(jBox->value())
+            .arg(kBox->value()),
+        4000);
+}
+
+void MainWindow::setFixedProstateCenter() {
+    showProstateCenterDialog(this, m_vtkWidget, VTKOpenGLWidget::FixedImage,
+                             tr("fixed (ultrasound)"));
 }
 
 void MainWindow::setMovingProstateCenter() {
-    if (m_vtkWidget->setProstateCenter(VTKOpenGLWidget::MovingImage)) {
-        statusBar()->showMessage(
-            tr("Moving (MRI) prostate center set at the crosshair."), 4000);
-    } else {
-        QMessageBox::warning(
-            this, tr("Set Prostate Center"),
-            tr("Load the moving (MRI) image first, then place the crosshair on "
-               "the prostate."));
-    }
+    showProstateCenterDialog(this, m_vtkWidget, VTKOpenGLWidget::MovingImage,
+                             tr("moving (MRI)"));
 }
 
 void MainWindow::registerImages() {

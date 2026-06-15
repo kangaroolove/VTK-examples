@@ -51,7 +51,9 @@ public:
     // starts already aligned at the prostate, which is fast and robust even when
     // the two volumes are far apart. Returns false if the image is not loaded.
     bool setProstateCenter(ImageRole role);
+    bool setProstateCenter(ImageRole role, int i, int j, int k);
     bool hasProstateCenter(ImageRole role) const;
+    bool getImageDimensions(ImageRole role, int dims[3]) const;
 
     // Rigidly registers the moving image (MRI) onto the fixed image (ultrasound)
     // and repositions the moving layer so the two volumes overlay in world

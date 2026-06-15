@@ -594,6 +594,32 @@ bool VTKOpenGLWidget::setProstateCenter(ImageRole role) {
     return true;
 }
 
+bool VTKOpenGLWidget::setProstateCenter(ImageRole role, int i, int j, int k) {
+    if (!m_layers[role].itkImage) {
+        return false;
+    }
+    itk::Image<float, 3>::IndexType idx;
+    idx[0] = i;
+    idx[1] = j;
+    idx[2] = k;
+    itk::Image<float, 3>::PointType physical;
+    m_layers[role].itkImage->TransformIndexToPhysicalPoint(idx, physical);
+    m_centers[role][0] = physical[0];
+    m_centers[role][1] = physical[1];
+    m_centers[role][2] = physical[2];
+    m_hasCenter[role] = true;
+    setCrosshairPosition(physical[0], physical[1], physical[2]);
+    return true;
+}
+
+bool VTKOpenGLWidget::getImageDimensions(ImageRole role, int dims[3]) const {
+    if (!m_layers[role].image) {
+        return false;
+    }
+    m_layers[role].image->GetDimensions(dims);
+    return true;
+}
+
 bool VTKOpenGLWidget::hasProstateCenter(ImageRole role) const {
     return m_hasCenter[role];
 }
