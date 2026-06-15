@@ -117,7 +117,7 @@ bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
     registration->SetMetric(metric);
     registration->SetOptimizer(optimizer);
 
-    metric->SetNumberOfHistogramBins(50);
+    metric->SetNumberOfHistogramBins(32);
     // Fix the work-unit count so the threaded reduction is order-deterministic.
     metric->SetMaximumNumberOfWorkUnits(kRegistrationWorkUnits);
 
@@ -160,18 +160,17 @@ bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
     scalesEstimator->SetTransformForward(true);
     optimizer->SetScalesEstimator(scalesEstimator);
 
-    optimizer->SetLearningRate(0.2);
+    optimizer->SetLearningRate(0.5);
     optimizer->SetMinimumStepLength(0.001);
-    optimizer->SetNumberOfIterations(100);
-    optimizer->SetRelaxationFactor(0.5);
+    optimizer->SetNumberOfIterations(50);
+    optimizer->SetRelaxationFactor(0.6);
     optimizer->SetReturnBestParametersAndValue(true);
     registration->SetNumberOfWorkUnits(kRegistrationWorkUnits);
 
-    // Deterministic sampling: a regular pattern (not random) covering 5% of the
-    // voxels, with a fixed seed for good measure. 5% is enough for mutual
-    // information to be stable while keeping each metric evaluation cheap.
-    registration->SetMetricSamplingStrategy(RegistrationType::REGULAR);
-    registration->SetMetricSamplingPercentage(0.05);
+    // Random sampling seeded for reproducibility. 10% gives a stable MI gradient
+    // so the optimizer needs fewer iterations from the pre-aligned starting point.
+    registration->SetMetricSamplingStrategy(RegistrationType::RANDOM);
+    registration->SetMetricSamplingPercentage(0.10);
     registration->MetricSamplingReinitializeSeed(kRegistrationSeed);
 
     // Coarse-to-fine for a wider capture range.
