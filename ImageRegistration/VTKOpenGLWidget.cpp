@@ -1,7 +1,17 @@
 #include "VTKOpenGLWidget.h"
 
-#include <QMouseEvent>
-
+#include <itkCenteredTransformInitializer.h>
+#include <itkImage.h>
+#include <itkImageFileReader.h>
+#include <itkImageRegistrationMethodv4.h>
+#include <itkImageToVTKImageFilter.h>
+#include <itkMattesMutualInformationImageToImageMetricv4.h>
+#include <itkMultiThreaderBase.h>
+#include <itkNrrdImageIO.h>
+#include <itkOrientImageFilter.h>
+#include <itkRegistrationParameterScalesFromPhysicalShift.h>
+#include <itkRegularStepGradientDescentOptimizerv4.h>
+#include <itkVersorRigid3DTransform.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
 #include <vtkGenericOpenGLRenderWindow.h>
@@ -22,21 +32,9 @@
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 
-#include <itkImage.h>
-#include <itkImageFileReader.h>
-#include <itkImageToVTKImageFilter.h>
-#include <itkNrrdImageIO.h>
-#include <itkOrientImageFilter.h>
-
-#include <itkCenteredTransformInitializer.h>
-#include <itkImageRegistrationMethodv4.h>
-#include <itkMattesMutualInformationImageToImageMetricv4.h>
-#include <itkMultiThreaderBase.h>
-#include <itkRegistrationParameterScalesFromPhysicalShift.h>
-#include <itkRegularStepGradientDescentOptimizerv4.h>
-#include <itkVersorRigid3DTransform.h>
-
+#include <QMouseEvent>
 #include <algorithm>
+#include <fstream>
 
 namespace {
 
@@ -210,6 +208,9 @@ bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
         }
         fixedToMoving->SetElement(row, 3, offset[row]);
     }
+    std::ofstream outFile("fixedToMoving.txt");
+    fixedToMoving->Print(outFile);
+
     return true;
 }
 
