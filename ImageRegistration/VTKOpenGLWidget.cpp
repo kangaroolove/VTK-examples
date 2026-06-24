@@ -277,14 +277,12 @@ bool VTKOpenGLWidget::loadImage(const QString &fileName, ImageRole role,
     // The world coordinates are LPS, but the voxel grid still uses the
     // file's own axis order, so the direction matrix may hold axis flips
     // and permutations (e.g. an RAS-ordered file reads with direction
-    // diag(-1,-1,1)). Reorient the voxels so the grid axes follow LPS;
+    // diag(-1,-1,1)). Reorient the voxels so the grid axes follow RAI;
     // afterwards the direction is identity unless the scan is oblique.
-    ImageType::DirectionType lpsDirection;
-    lpsDirection.SetIdentity();
     typedef itk::OrientImageFilter<ImageType, ImageType> OrientFilterType;
     OrientFilterType::Pointer orienter = OrientFilterType::New();
     orienter->UseImageDirectionOn();
-    orienter->SetDesiredCoordinateDirection(lpsDirection);
+    orienter->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
     orienter->SetInput(reader->GetOutput());
     try {
         orienter->Update();
