@@ -74,9 +74,13 @@ void MainWindow::createMenus() {
 }
 
 void MainWindow::openFixedImage() {
-    const QString fileName = promptForImageFile(tr("Open Fixed Image"));
-    if (fileName.isEmpty())
-        return;
+    // QString fileName = promptForImageFile(tr("Open Fixed Image"));
+    // if (fileName.isEmpty())
+    //     return;
+
+    QString fileName =
+        "D:/Standard test-data-V3/Set B - Real Patient/Patient A - "
+        "Registration/3D-USScan_20201029101446 - 000 NEW.nrrd";
 
     QString error;
     if (!m_vtkWidget->loadImage(fileName, VTKOpenGLWidget::FixedImage, error)) {
@@ -85,9 +89,13 @@ void MainWindow::openFixedImage() {
 }
 
 void MainWindow::openMovingImage() {
-    const QString fileName = promptForImageFile(tr("Open Moving Image"));
-    if (fileName.isEmpty())
-        return;
+    // QString fileName = promptForImageFile(tr("Open Moving Image"));
+    // if (fileName.isEmpty())
+    //     return;
+
+    QString fileName =
+        "D:/Standard test-data-V3/Set B - Real Patient/Patient A - "
+        "Registration/t2/t2.nrrd";
 
     QString error;
     if (!m_vtkWidget->loadImage(fileName, VTKOpenGLWidget::MovingImage, error)) {
