@@ -199,11 +199,14 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadDICOMImage(
     outItkImage = itkReader->GetOutput();
 
     auto direction = itkReader->GetOutput()->GetDirection();
+    auto origin = itkReader->GetOutput()->GetOrigin();
     outMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
     outMatrix->Identity();
-    for (unsigned int i = 0; i < 3; ++i)
+    for (unsigned int i = 0; i < 3; ++i) {
         for (unsigned int j = 0; j < 3; ++j)
             outMatrix->SetElement(i, j, direction(i, j));
+        outMatrix->SetElement(i, 3, origin[i]);
+    }
 
     using FilterType = itk::ImageToVTKImageFilter<ImageType>;
     FilterType::Pointer filter = FilterType::New();
@@ -220,6 +223,7 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadDICOMImage(
     reslice->GetOutput()->Print(std::cout);
 
     vtkSmartPointer<vtkImageData> result = reslice->GetOutput();
+    result->SetOrigin(0.0, 0.0, 0.0);
     return result;
 }
 
@@ -241,11 +245,14 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadNrrdImage(
     outItkImage = itkReader->GetOutput();
 
     auto direction = itkReader->GetOutput()->GetDirection();
+    auto origin = itkReader->GetOutput()->GetOrigin();
     outMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
     outMatrix->Identity();
-    for (unsigned int i = 0; i < 3; ++i)
+    for (unsigned int i = 0; i < 3; ++i) {
         for (unsigned int j = 0; j < 3; ++j)
             outMatrix->SetElement(i, j, direction(i, j));
+        outMatrix->SetElement(i, 3, origin[i]);
+    }
 
     using FilterType = itk::ImageToVTKImageFilter<ImageType>;
     FilterType::Pointer filter = FilterType::New();
@@ -261,6 +268,7 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadNrrdImage(
     reslice->GetOutput()->Print(std::cout);
 
     vtkSmartPointer<vtkImageData> result = reslice->GetOutput();
+    result->SetOrigin(0.0, 0.0, 0.0);
     return result;
 }
 
