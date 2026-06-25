@@ -95,11 +95,39 @@ public:
 
     void SetRenderer(vtkRenderer *renderer) { mRenderer = renderer; }
 
+    void SetPlane(vtkPlane *plane) { mPlane = plane; }
+
+    void SetSliceStep(double step) { mSliceStep = step; }
+
+    virtual void OnMouseWheelForward() override {
+        if (!mPlane) return;
+        double origin[3], normal[3];
+        mPlane->GetOrigin(origin);
+        mPlane->GetNormal(normal);
+        for (int i = 0; i < 3; ++i)
+            origin[i] += normal[i] * mSliceStep;
+        mPlane->SetOrigin(origin);
+        this->GetInteractor()->GetRenderWindow()->Render();
+    }
+
+    virtual void OnMouseWheelBackward() override {
+        if (!mPlane) return;
+        double origin[3], normal[3];
+        mPlane->GetOrigin(origin);
+        mPlane->GetNormal(normal);
+        for (int i = 0; i < 3; ++i)
+            origin[i] -= normal[i] * mSliceStep;
+        mPlane->SetOrigin(origin);
+        this->GetInteractor()->GetRenderWindow()->Render();
+    }
+
 private:
     vtkImageActor *mImageActor;
     vtkImageSlice *mImageSlice;
     vtkRenderWindow *mRenderWindow;
     vtkRenderer *mRenderer;
+    vtkPlane *mPlane = nullptr;
+    double mSliceStep = 1.0;
 };
 vtkStandardNewMacro(KeyPressInteractorStyle);
 
@@ -247,9 +275,13 @@ void VTKOpenGLWidget::createTestData() {
     vtkNew<vtkImageResliceMapper> MriMapper;
     MriMapper->SetInputData(MriImageData);
 
-    vtkNew<vtkPlane> plane;
-    plane->SetOrigin(0, 0, 0);
-    plane->SetNormal(0, 0, 1);
+    double spacing[3];
+    MriImageData->GetSpacing(spacing);
+
+    m_plane = vtkSmartPointer<vtkPlane>::New();
+    m_plane->SetOrigin(0, 0, 0);
+    m_plane->SetNormal(0, 0, 1);
+    MriMapper->SetSlicePlane(m_plane);
 
     vtkNew<vtkLookupTable> MriLut;
     MriLut->SetRange(MriImageData->GetScalarRange());
@@ -276,6 +308,7 @@ void VTKOpenGLWidget::createTestData() {
 
     vtkNew<vtkImageResliceMapper> usMapper;
     usMapper->SetInputData(usData);
+    usMapper->SetSlicePlane(m_plane);
 
     vtkNew<vtkLookupTable> usLut;
     usLut->SetRange(usData->GetScalarRange());
@@ -285,18 +318,33 @@ void VTKOpenGLWidget::createTestData() {
     usLut->SetRampToLinear();
     usLut->Build();
 
-    vtkNew<vtkImageSlice> usSlice;
-    usSlice->SetMapper(usMapper);
-    usSlice->GetProperty()->UseLookupTableScalarRangeOn();
-    usSlice->GetProperty()->SetLookupTable(usLut);
-    usSlice->SetUserMatrix(usMatrix);
+    m_usSlice = vtkSmartPointer<vtkImageSlice>::New();
+    m_usSlice->SetMapper(usMapper);
+    m_usSlice->GetProperty()->UseLookupTableScalarRangeOn();
+    m_usSlice->GetProperty()->SetLookupTable(usLut);
+    m_usSlice->SetUserMatrix(usMatrix);
 
-    m_renderer->AddViewProp(usSlice);
+    m_renderer->AddViewProp(m_usSlice);
 
     m_renderer->GetActiveCamera()->Pitch(180);
     m_renderer->GetActiveCamera()->Roll(180);
 
     m_renderer->ResetCamera();
+
+    m_style->SetPlane(m_plane);
+    m_style->SetSliceStep(spacing[2]);
+}
+
+void VTKOpenGLWidget::setUsOpacity(double opacity) {
+    if (m_usSlice)
+        m_usSlice->GetProperty()->SetOpacity(opacity);
+    m_renderWindow->Render();
+}
+
+void VTKOpenGLWidget::setMriOpacity(double opacity) {
+    if (m_mriSlice)
+        m_mriSlice->GetProperty()->SetOpacity(opacity);
+    m_renderWindow->Render();
 }
 
 void VTKOpenGLWidget::runRegistration() {

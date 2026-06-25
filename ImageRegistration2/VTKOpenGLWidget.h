@@ -11,6 +11,7 @@ class vtkGenericOpenGLRenderWindow;
 class vtkImageData;
 class vtkImageSlice;
 class vtkMatrix4x4;
+class vtkPlane;
 class vtkRenderer;
 class KeyPressInteractorStyle;
 
@@ -20,6 +21,9 @@ public:
     ~VTKOpenGLWidget();
 
     void runRegistration();
+
+    void setUsOpacity(double opacity);
+    void setMriOpacity(double opacity);
 
     // Converts IJK voxel indices to LPS world coordinates for both images.
     // usWorld and mriWorld are the output physical points.
@@ -42,7 +46,9 @@ private:
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
     vtkSmartPointer<KeyPressInteractorStyle> m_style;
+    vtkSmartPointer<vtkImageSlice> m_usSlice;
     vtkSmartPointer<vtkImageSlice> m_mriSlice;
+    vtkSmartPointer<vtkPlane> m_plane;
 
     itk::Image<short, 3>::Pointer m_usItkImage;
     itk::Image<short, 3>::Pointer m_mriItkImage;

@@ -12,6 +12,7 @@ public:
 
 private slots:
     void onRigidRegistration();
+    void onOpacityControls();
 
 private:
     void createMenuBar();
