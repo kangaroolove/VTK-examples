@@ -214,41 +214,63 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadNrrdImage(
 }
 
 void VTKOpenGLWidget::createTestData() {
-    std::string dir = "D:/Standard test-data-V3/Set B - Real Patient/Patient B/CBL_T2";
+    std::string MriDir =
+        "D:/Standard test-data-V3/Set B - Real Patient/Patient B/CBL_T2";
 
-    vtkSmartPointer<vtkMatrix4x4> matrix;
-    auto imageData = loadDICOMImage(dir, matrix);
+    vtkSmartPointer<vtkMatrix4x4> MRIMatrix;
+    auto MriImageData = loadDICOMImage(MriDir, MRIMatrix);
 
-    vtkNew<vtkTransform> transform;
-    transform->SetMatrix(matrix);
-
-    vtkNew<vtkImageResliceMapper> mapper;
-    mapper->SetInputData(imageData);
+    vtkNew<vtkImageResliceMapper> MriMapper;
+    MriMapper->SetInputData(MriImageData);
 
     vtkNew<vtkPlane> plane;
     plane->SetOrigin(0, 0, 0);
     plane->SetNormal(0, 0, 1);
 
-    // mapper->SetSliceAtFocalPoint(true);
-    // mapper->SetSliceFacesCamera(true);
+    vtkNew<vtkLookupTable> MriLut;
+    MriLut->SetRange(MriImageData->GetScalarRange());
+    MriLut->SetHueRange(0.0, 0.0);
+    MriLut->SetSaturationRange(0.0, 0.0);
+    MriLut->SetValueRange(0.0, 1.0);
+    MriLut->SetRampToLinear();
+    MriLut->Build();
 
-    vtkNew<vtkLookupTable> lut;
-    lut->SetRange(imageData->GetScalarRange());
-    lut->SetHueRange(0.0, 0.0);
-    lut->SetSaturationRange(0.0, 0.0);
-    lut->SetValueRange(0.0, 1.0);
-    lut->SetRampToLinear();
-    lut->Build();
+    vtkNew<vtkImageSlice> MriSlice;
+    MriSlice->SetMapper(MriMapper);
 
-    vtkNew<vtkImageSlice> slice;
-    slice->SetMapper(mapper);
+    MriSlice->GetProperty()->UseLookupTableScalarRangeOn();
+    MriSlice->GetProperty()->SetLookupTable(MriLut);
+    MriSlice->SetUserMatrix(MRIMatrix);
 
-    slice->GetProperty()->UseLookupTableScalarRangeOn();
-    slice->GetProperty()->SetLookupTable(lut);
-    slice->SetUserMatrix(matrix);
+    // m_renderer->AddViewProp(MriSlice);
+    // m_style->SetImageSlice(MriSlice);
 
-    m_renderer->AddViewProp(slice);
-    m_style->SetImageSlice(slice);
+    std::string ultrasoundDir =
+        "D:/Standard test-data-V3/Set B - Real Patient/Patient A - "
+        "Registration/3D-USScan_20201029101446 - 000 NEW.nrrd";
+
+    vtkSmartPointer<vtkMatrix4x4> usMatrix;
+    auto usData = loadNrrdImage(ultrasoundDir, usMatrix);
+
+    vtkNew<vtkImageResliceMapper> usMapper;
+    usMapper->SetInputData(usData);
+
+    vtkNew<vtkLookupTable> usLut;
+    usLut->SetRange(usData->GetScalarRange());
+    usLut->SetHueRange(0.0, 0.0);
+    usLut->SetSaturationRange(0.0, 0.0);
+    usLut->SetValueRange(0.0, 1.0);
+    usLut->SetRampToLinear();
+    usLut->Build();
+
+    vtkNew<vtkImageSlice> usSlice;
+    usSlice->SetMapper(usMapper);
+
+    usSlice->GetProperty()->UseLookupTableScalarRangeOn();
+    usSlice->GetProperty()->SetLookupTable(usLut);
+    usSlice->SetUserMatrix(usMatrix);
+
+    m_renderer->AddViewProp(usSlice);
 
     m_renderer->GetActiveCamera()->Pitch(180);
     m_renderer->GetActiveCamera()->Roll(180);
