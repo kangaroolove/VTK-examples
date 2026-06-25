@@ -319,8 +319,8 @@ void VTKOpenGLWidget::runRegistration() {
     vtkNew<vtkMatrix4x4> fixedToMoving;
     std::string errorMessage;
 
-    itk::Index<3> usIJK = {0, 0, 1};
-    itk::Index<3> mriIJK = {1, 0, 0};
+    itk::Index<3> usIJK = {371, 164, 65};
+    itk::Index<3> mriIJK = {325, 294, 9};
 
     itk::Point<double, 3> usCenter;
     itk::Point<double, 3> mriCenter;
@@ -364,6 +364,8 @@ void VTKOpenGLWidget::imageIJKToWorld(const itk::Index<3> &usIJK,
                                       itk::Point<double, 3> &mriWorld) const {
     usWorld = itkIJKToWorld(m_usItkImage.GetPointer(), usIJK);
     mriWorld = itkIJKToWorld(m_mriItkImage.GetPointer(), mriIJK);
+    qDebug() << "usWorld:" << usWorld[0] << usWorld[1] << usWorld[2];
+    qDebug() << "mriWorld:" << mriWorld[0] << mriWorld[1] << mriWorld[2];
 }
 
 // Rigidly registers moving onto fixed using Mattes mutual information, which is
