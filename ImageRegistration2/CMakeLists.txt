@@ -46,6 +46,8 @@ list(APPEND EXTRA_LIBS
 
 set(PROJECT_SOURCES
     main.cpp
+    MainWindow.cpp
+    MainWindow.h
     VTKOpenGLWidget.cpp
     VTKOpenGLWidget.h
 )
