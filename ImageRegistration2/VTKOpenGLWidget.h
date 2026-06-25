@@ -21,6 +21,8 @@ private:
     void createTestData();
     vtkSmartPointer<vtkImageData> loadDICOMImage(const std::string &dir,
                                                   vtkSmartPointer<vtkMatrix4x4> &outMatrix);
+    vtkSmartPointer<vtkImageData> loadNrrdImage(
+        const std::string &dir, vtkSmartPointer<vtkMatrix4x4> &outMatrix);
 
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;

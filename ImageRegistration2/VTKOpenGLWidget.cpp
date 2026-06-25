@@ -6,6 +6,7 @@
 #include <itkImageSeriesReader.h>
 #include <itkImageToVTKImageFilter.h>
 #include <itkMetaDataObject.h>
+#include <itkNrrdImageIO.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
 #include <vtkConeSource.h>
@@ -163,6 +164,44 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadDICOMImage(const std::string 
 
     if (filter->GetOutput())
         qDebug() << "converted successfully";
+
+    // If I don't use this, the application will crash
+    vtkNew<vtkImageReslice> reslice;
+    reslice->SetInputData(filter->GetOutput());
+    reslice->Update();
+    reslice->GetOutput()->Print(std::cout);
+
+    vtkSmartPointer<vtkImageData> result = reslice->GetOutput();
+    return result;
+}
+
+vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadNrrdImage(
+    const std::string &dir, vtkSmartPointer<vtkMatrix4x4> &outMatrix) {
+    using ImageType = itk::Image<short, 3>;
+    using ReaderType = itk::ImageFileReader<ImageType>;
+
+    auto itkReader = ReaderType::New();
+    auto nrrdIO = itk::NrrdImageIO::New();
+    itkReader->SetImageIO(nrrdIO);
+    itkReader->SetFileName(dir);
+    try {
+        itkReader->Update();
+    } catch (...) {
+    }
+
+    auto direction = itkReader->GetOutput()->GetDirection();
+    outMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
+    outMatrix->Identity();
+    for (unsigned int i = 0; i < 3; ++i)
+        for (unsigned int j = 0; j < 3; ++j)
+            outMatrix->SetElement(i, j, direction(i, j));
+
+    using FilterType = itk::ImageToVTKImageFilter<ImageType>;
+    FilterType::Pointer filter = FilterType::New();
+    filter->SetInput(itkReader->GetOutput());
+    filter->Update();
+
+    if (filter->GetOutput()) qDebug() << "converted successfully";
 
     // If I don't use this, the application will crash
     vtkNew<vtkImageReslice> reslice;
