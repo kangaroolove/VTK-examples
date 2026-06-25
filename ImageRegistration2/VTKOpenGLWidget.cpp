@@ -215,7 +215,8 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadNrrdImage(
 
 void VTKOpenGLWidget::createTestData() {
     std::string MriDir =
-        "D:/Standard test-data-V3/Set B - Real Patient/Patient B/CBL_T2";
+        "D:/Standard test-data-V3/Set B - Real Patient/Patient A - "
+        "Registration/t2";
 
     vtkSmartPointer<vtkMatrix4x4> MRIMatrix;
     auto MriImageData = loadDICOMImage(MriDir, MRIMatrix);
@@ -242,7 +243,7 @@ void VTKOpenGLWidget::createTestData() {
     MriSlice->GetProperty()->SetLookupTable(MriLut);
     MriSlice->SetUserMatrix(MRIMatrix);
 
-    // m_renderer->AddViewProp(MriSlice);
+    m_renderer->AddViewProp(MriSlice);
     // m_style->SetImageSlice(MriSlice);
 
     std::string ultrasoundDir =
