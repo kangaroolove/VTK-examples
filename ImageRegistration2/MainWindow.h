@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 
+class QDialog;
 class VTKOpenGLWidget;
 
 class MainWindow : public QMainWindow {
@@ -18,4 +19,5 @@ private:
     void createMenuBar();
 
     VTKOpenGLWidget *m_vtkWidget;
+    QDialog *m_opacityDialog = nullptr;
 };

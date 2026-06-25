@@ -41,26 +41,30 @@ void MainWindow::onRigidRegistration() {
 }
 
 void MainWindow::onOpacityControls() {
-    QDialog dialog(this);
-    dialog.setWindowTitle("Opacity Controls");
+    if (!m_opacityDialog) {
+        m_opacityDialog = new QDialog(this);
+        m_opacityDialog->setWindowTitle("Opacity Controls");
 
-    QFormLayout *layout = new QFormLayout(&dialog);
+        QFormLayout *layout = new QFormLayout(m_opacityDialog);
 
-    QSlider *usSlider = new QSlider(Qt::Horizontal, &dialog);
-    usSlider->setRange(0, 100);
-    usSlider->setValue(100);
+        QSlider *usSlider = new QSlider(Qt::Horizontal, m_opacityDialog);
+        usSlider->setRange(0, 100);
+        usSlider->setValue(100);
 
-    QSlider *mriSlider = new QSlider(Qt::Horizontal, &dialog);
-    mriSlider->setRange(0, 100);
-    mriSlider->setValue(100);
+        QSlider *mriSlider = new QSlider(Qt::Horizontal, m_opacityDialog);
+        mriSlider->setRange(0, 100);
+        mriSlider->setValue(100);
 
-    layout->addRow("US Opacity:", usSlider);
-    layout->addRow("MRI Opacity:", mriSlider);
+        layout->addRow("US Opacity:", usSlider);
+        layout->addRow("MRI Opacity:", mriSlider);
 
-    connect(usSlider, &QSlider::valueChanged, this,
-            [this](int value) { m_vtkWidget->setUsOpacity(value / 100.0); });
-    connect(mriSlider, &QSlider::valueChanged, this,
-            [this](int value) { m_vtkWidget->setMriOpacity(value / 100.0); });
+        connect(usSlider, &QSlider::valueChanged, this,
+                [this](int value) { m_vtkWidget->setUsOpacity(value / 100.0); });
+        connect(mriSlider, &QSlider::valueChanged, this,
+                [this](int value) { m_vtkWidget->setMriOpacity(value / 100.0); });
+    }
 
-    dialog.exec();
+    m_opacityDialog->show();
+    m_opacityDialog->raise();
+    m_opacityDialog->activateWindow();
 }
