@@ -104,9 +104,8 @@ void VTKOpenGLWidget::initialize() {
     m_style->SetRenderer(m_renderer);
 }
 
-void VTKOpenGLWidget::createTestData() {
-    std::string dir = "D:/Standard test-data-V3/Set B - Real Patient/Patient B/CBL_T2";
-
+vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadDICOMImage(const std::string &dir,
+                                                               vtkSmartPointer<vtkMatrix4x4> &outMatrix) {
     using ImageType = itk::Image<short, 3>;
     using ReaderType = itk::ImageSeriesReader<ImageType>;
 
@@ -131,74 +130,61 @@ void VTKOpenGLWidget::createTestData() {
         for (auto fileName : fileNames) std::cout << fileName << std::endl;
     }
 
-    std::string seriesIdentifier;
-    seriesIdentifier = seriesUID.begin()->c_str();
-
-    using FileNamesContainer = std::vector<std::string>;
-    FileNamesContainer fileNames;
-    fileNames = nameGenerator->GetFileNames(seriesIdentifier);
-    itkReader->SetFileNames(fileNames);
+    std::string seriesIdentifier = seriesUID.begin()->c_str();
+    itkReader->SetFileNames(nameGenerator->GetFileNames(seriesIdentifier));
     try {
         itkReader->Update();
     } catch (...) {
     }
 
     using DictionaryType = itk::MetaDataDictionary;
-
     const DictionaryType &dictionary = dicomIO->GetMetaDataDictionary();
 
     using MetaDataStringType = itk::MetaDataObject<std::string>;
-    std::string seriesNumber = "0020|0011";
-    auto it = dictionary.Find(seriesNumber);
+    auto it = dictionary.Find("0020|0011");
     if (it != dictionary.End()) {
-        itk::MetaDataObjectBase::Pointer entry = it->second;
-
         MetaDataStringType::Pointer entryvalue =
-            dynamic_cast<MetaDataStringType *>(entry.GetPointer());
-
-        if (entryvalue) {
-            std::string tagkey = it->first;
-            std::string tagvalue = entryvalue->GetMetaDataObjectValue();
-            std::cout << tagkey << " = " << tagvalue << std::endl;
-        }
+            dynamic_cast<MetaDataStringType *>(it->second.GetPointer());
+        if (entryvalue)
+            std::cout << it->first << " = " << entryvalue->GetMetaDataObjectValue() << std::endl;
     }
 
     auto direction = itkReader->GetOutput()->GetDirection();
-
-    // Get direction matrix
-    vtkNew<vtkMatrix4x4> matrix;
-    matrix->Identity();
-
-    for (unsigned int i = 0; i < 3; ++i) {
-        for (unsigned int j = 0; j < 3; ++j) {
-            matrix->SetElement(i, j, direction(i, j));
-        }
-    }
+    outMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
+    outMatrix->Identity();
+    for (unsigned int i = 0; i < 3; ++i)
+        for (unsigned int j = 0; j < 3; ++j)
+            outMatrix->SetElement(i, j, direction(i, j));
 
     using FilterType = itk::ImageToVTKImageFilter<ImageType>;
     FilterType::Pointer filter = FilterType::New();
     filter->SetInput(itkReader->GetOutput());
     filter->Update();
 
-    // Get the VTK image
-    auto image = filter->GetOutput();
-    if (image) {
+    if (filter->GetOutput())
         qDebug() << "converted successfully";
-        // image->Print(std::cout);
-    }
 
     // If I don't use this, the application will crash
     vtkNew<vtkImageReslice> reslice;
     reslice->SetInputData(filter->GetOutput());
     reslice->Update();
-
     reslice->GetOutput()->Print(std::cout);
+
+    vtkSmartPointer<vtkImageData> result = reslice->GetOutput();
+    return result;
+}
+
+void VTKOpenGLWidget::createTestData() {
+    std::string dir = "D:/Standard test-data-V3/Set B - Real Patient/Patient B/CBL_T2";
+
+    vtkSmartPointer<vtkMatrix4x4> matrix;
+    auto imageData = loadDICOMImage(dir, matrix);
 
     vtkNew<vtkTransform> transform;
     transform->SetMatrix(matrix);
 
     vtkNew<vtkImageResliceMapper> mapper;
-    mapper->SetInputData(reslice->GetOutput());
+    mapper->SetInputData(imageData);
 
     vtkNew<vtkPlane> plane;
     plane->SetOrigin(0, 0, 0);
@@ -208,7 +194,7 @@ void VTKOpenGLWidget::createTestData() {
     // mapper->SetSliceFacesCamera(true);
 
     vtkNew<vtkLookupTable> lut;
-    lut->SetRange(image->GetScalarRange());
+    lut->SetRange(imageData->GetScalarRange());
     lut->SetHueRange(0.0, 0.0);
     lut->SetSaturationRange(0.0, 0.0);
     lut->SetValueRange(0.0, 1.0);
