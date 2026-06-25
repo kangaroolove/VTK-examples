@@ -29,6 +29,12 @@ find_package(ITK REQUIRED
   ITKIOGDCM
   ITKIONRRD
   ITKVtkGlue
+  ITKRegistrationMethodsv4
+  ITKOptimizersv4
+  ITKMetricsv4
+  ITKTransform
+  ITKIOTransformBase
+  ITKIOTransformInsightLegacy
 )
 include(${ITK_USE_FILE})
 

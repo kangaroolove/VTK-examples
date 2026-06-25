@@ -4,7 +4,6 @@
 #include <QAction>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -26,6 +25,5 @@ void MainWindow::createMenuBar() {
 }
 
 void MainWindow::onRigidRegistration() {
-    // TODO: implement rigid registration
-    QMessageBox::information(this, "Rigid Registration", "Rigid Registration (MRI->US) triggered.");
+    m_vtkWidget->runRegistration();
 }
