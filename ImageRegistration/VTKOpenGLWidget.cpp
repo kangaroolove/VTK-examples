@@ -11,6 +11,7 @@
 #include <itkOrientImageFilter.h>
 #include <itkRegistrationParameterScalesFromPhysicalShift.h>
 #include <itkRegularStepGradientDescentOptimizerv4.h>
+#include <itkTransformFileWriter.h>
 #include <itkVersorRigid3DTransform.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
@@ -34,7 +35,6 @@
 
 #include <QMouseEvent>
 #include <algorithm>
-#include <fstream>
 
 namespace {
 
@@ -208,8 +208,10 @@ bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
         }
         fixedToMoving->SetElement(row, 3, offset[row]);
     }
-    std::ofstream outFile("fixedToMoving.txt");
-    fixedToMoving->Print(outFile);
+    auto tfmWriter = itk::TransformFileWriterTemplate<double>::New();
+    tfmWriter->SetInput(finalTransform);
+    tfmWriter->SetFileName("rigid.tfm");
+    tfmWriter->Update();
 
     return true;
 }

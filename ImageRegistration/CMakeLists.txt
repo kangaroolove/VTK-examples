@@ -39,6 +39,8 @@ find_package(ITK REQUIRED
   ITKOptimizersv4
   ITKMetricsv4
   ITKSmoothing
+  ITKIOTransformBase
+  ITKIOTransformInsightLegacy
 )
 include(${ITK_USE_FILE})
 
