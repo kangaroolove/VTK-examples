@@ -2,6 +2,7 @@
 
 #include <QVTKOpenGLNativeWidget.h>
 #include <itkImage.h>
+#include <itkPoint.h>
 #include <vtkSmartPointer.h>
 
 #include <string>
@@ -20,7 +21,15 @@ public:
 
     void runRegistration();
 
+    // Converts IJK voxel indices to LPS world coordinates for both images.
+    // usWorld and mriWorld are the output physical points.
+    void imageIJKToWorld(const itk::Index<3> &usIJK, const itk::Index<3> &mriIJK,
+                         itk::Point<double, 3> &usWorld,
+                         itk::Point<double, 3> &mriWorld) const;
+
 private:
+    static itk::Point<double, 3> itkIJKToWorld(const itk::Image<short, 3> *image,
+                                                const itk::Index<3> &ijk);
     void initialize();
     void createTestData();
     vtkSmartPointer<vtkImageData> loadDICOMImage(const std::string &dir,

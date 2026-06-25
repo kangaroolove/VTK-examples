@@ -318,10 +318,22 @@ void VTKOpenGLWidget::runRegistration() {
 
     vtkNew<vtkMatrix4x4> fixedToMoving;
     std::string errorMessage;
-    bool ok = runRigidRegistration(castFixed->GetOutput(), castMoving->GetOutput(),
-                                    nullptr, nullptr, fixedToMoving, errorMessage);
+
+    itk::Index<3> usIJK = {0, 0, 1};
+    itk::Index<3> mriIJK = {1, 0, 0};
+
+    itk::Point<double, 3> usCenter;
+    itk::Point<double, 3> mriCenter;
+
+    imageIJKToWorld(usIJK, mriIJK, usCenter, mriCenter);
+
+    bool ok =
+        runRigidRegistration(castFixed->GetOutput(), castMoving->GetOutput(),
+                             usCenter.GetDataPointer(), mriCenter.GetDataPointer(),
+                             fixedToMoving, errorMessage);
     if (!ok) {
-        qDebug() << "Registration failed:" << QString::fromStdString(errorMessage);
+        qDebug() << "Registration failed:"
+                 << QString::fromStdString(errorMessage);
         return;
     }
 
@@ -332,10 +344,26 @@ void VTKOpenGLWidget::runRegistration() {
     vtkMatrix4x4::Invert(fixedToMoving, movingToFixed);
 
     vtkNew<vtkMatrix4x4> newMriMatrix;
-    vtkMatrix4x4::Multiply4x4(movingToFixed, m_mriSlice->GetUserMatrix(), newMriMatrix);
+    vtkMatrix4x4::Multiply4x4(movingToFixed, m_mriSlice->GetUserMatrix(),
+                              newMriMatrix);
     m_mriSlice->SetUserMatrix(newMriMatrix);
 
     m_renderWindow->Render();
+}
+
+itk::Point<double, 3> VTKOpenGLWidget::itkIJKToWorld(
+    const itk::Image<short, 3> *image, const itk::Index<3> &ijk) {
+    itk::Point<double, 3> world;
+    image->TransformIndexToPhysicalPoint(ijk, world);
+    return world;
+}
+
+void VTKOpenGLWidget::imageIJKToWorld(const itk::Index<3> &usIJK,
+                                      const itk::Index<3> &mriIJK,
+                                      itk::Point<double, 3> &usWorld,
+                                      itk::Point<double, 3> &mriWorld) const {
+    usWorld = itkIJKToWorld(m_usItkImage.GetPointer(), usIJK);
+    mriWorld = itkIJKToWorld(m_mriItkImage.GetPointer(), mriIJK);
 }
 
 // Rigidly registers moving onto fixed using Mattes mutual information, which is
