@@ -200,8 +200,12 @@ void VTKOpenGLWidget::createTestData() {
     vtkNew<vtkImageResliceMapper> mapper;
     mapper->SetInputData(reslice->GetOutput());
 
-    mapper->SetSliceAtFocalPoint(true);
-    mapper->SetSliceFacesCamera(true);
+    vtkNew<vtkPlane> plane;
+    plane->SetOrigin(0, 0, 0);
+    plane->SetNormal(0, 0, 1);
+
+    // mapper->SetSliceAtFocalPoint(true);
+    // mapper->SetSliceFacesCamera(true);
 
     vtkNew<vtkLookupTable> lut;
     lut->SetRange(image->GetScalarRange());
@@ -223,7 +227,7 @@ void VTKOpenGLWidget::createTestData() {
 
     m_renderer->GetActiveCamera()->Pitch(180);
     m_renderer->GetActiveCamera()->Roll(180);
-    m_renderer->GetActiveCamera()->ApplyTransform(transform);
+    // m_renderer->GetActiveCamera()->ApplyTransform(transform);
 
     m_renderer->ResetCamera();
 }
