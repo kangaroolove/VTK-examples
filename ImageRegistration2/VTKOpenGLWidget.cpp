@@ -6,6 +6,7 @@
 #include <itkGDCMSeriesFileNames.h>
 #include <itkImage.h>
 #include <itkImageFileReader.h>
+#include <itkImageFileWriter.h>
 #include <itkImageRegistrationMethodv4.h>
 #include <itkImageSeriesReader.h>
 #include <itkImageToVTKImageFilter.h>
@@ -15,6 +16,7 @@
 #include <itkRegistrationParameterScalesFromPhysicalShift.h>
 #include <itkRegularStepGradientDescentOptimizerv4.h>
 #include <itkTransformFileWriter.h>
+#include <itkEuler3DTransform.h>
 #include <itkVersorRigid3DTransform.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
@@ -48,6 +50,11 @@ static constexpr unsigned int kRegistrationSeed = 42;
 bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
                           const double *fixedCenter, const double *movingCenter,
                           vtkMatrix4x4 *fixedToMoving, std::string &errorMessage);
+
+vtkSmartPointer<vtkMatrix4x4> RegisterProstateWithCenters(
+    RegImageType *fixed, RegImageType *moving,
+    const itk::Point<double, 3> &fixedCenter,
+    const itk::Point<double, 3> &movingCenter);
 
 class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
@@ -273,12 +280,12 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadNrrdImage(
 }
 
 void VTKOpenGLWidget::createTestData() {
-    std::string MriDir =
+    m_mriDir =
         "D:/Standard test-data-V3/Set B - Real Patient/Patient A - "
         "Registration/t2";
 
     vtkSmartPointer<vtkMatrix4x4> MRIMatrix;
-    auto MriImageData = loadDICOMImage(MriDir, MRIMatrix, m_mriItkImage);
+    auto MriImageData = loadDICOMImage(m_mriDir, MRIMatrix, m_mriItkImage);
 
     vtkNew<vtkImageResliceMapper> MriMapper;
     MriMapper->SetInputData(MriImageData);
@@ -307,12 +314,12 @@ void VTKOpenGLWidget::createTestData() {
 
     m_renderer->AddViewProp(m_mriSlice);
 
-    std::string ultrasoundDir =
+    m_ultrasoundPath =
         "D:/Standard test-data-V3/Set B - Real Patient/Patient A - "
         "Registration/3D-USScan_20201029101446 - 000 NEW.nrrd";
 
     vtkSmartPointer<vtkMatrix4x4> usMatrix;
-    auto usData = loadNrrdImage(ultrasoundDir, usMatrix, m_usItkImage);
+    auto usData = loadNrrdImage(m_ultrasoundPath, usMatrix, m_usItkImage);
 
     vtkNew<vtkImageResliceMapper> usMapper;
     usMapper->SetInputData(usData);
@@ -396,6 +403,47 @@ void VTKOpenGLWidget::runRegistration() {
     // fixedToMoving maps US (fixed) → MRI (moving) physical space.
     // Invert to get MRI → US, then pre-multiply the MRI actor's current
     // direction transform so it renders in the US/world frame.
+    vtkNew<vtkMatrix4x4> movingToFixed;
+    vtkMatrix4x4::Invert(fixedToMoving, movingToFixed);
+
+    vtkNew<vtkMatrix4x4> newMriMatrix;
+    vtkMatrix4x4::Multiply4x4(movingToFixed, m_mriSlice->GetUserMatrix(),
+                              newMriMatrix);
+    m_mriSlice->SetUserMatrix(newMriMatrix);
+
+    m_renderWindow->Render();
+}
+
+void VTKOpenGLWidget::runRegistrationWithCenters() {
+    if (!m_usItkImage || !m_mriItkImage || !m_mriSlice) {
+        qDebug() << "Images not loaded, cannot run registration";
+        return;
+    }
+
+    itk::Index<3> usIJK = {371, 164, 65};
+    itk::Index<3> mriIJK = {325, 294, 9};
+
+    itk::Point<double, 3> usCenter;
+    itk::Point<double, 3> mriCenter;
+    imageIJKToWorld(usIJK, mriIJK, usCenter, mriCenter);
+
+    using CastFilter = itk::CastImageFilter<itk::Image<short, 3>, RegImageType>;
+    auto castFixed = CastFilter::New();
+    castFixed->SetInput(m_usItkImage);
+    castFixed->Update();
+
+    auto castMoving = CastFilter::New();
+    castMoving->SetInput(m_mriItkImage);
+    castMoving->Update();
+
+    auto fixedToMoving = RegisterProstateWithCenters(
+        castFixed->GetOutput(), castMoving->GetOutput(), usCenter, mriCenter);
+    if (!fixedToMoving) {
+        qDebug() << "Euler3D registration failed";
+        return;
+    }
+
+    // Invert to get MRI→US, then fold into the MRI actor's current matrix.
     vtkNew<vtkMatrix4x4> movingToFixed;
     vtkMatrix4x4::Invert(fixedToMoving, movingToFixed);
 
@@ -497,16 +545,16 @@ bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
 
     optimizer->SetLearningRate(0.5);
     optimizer->SetMinimumStepLength(0.001);
-    optimizer->SetNumberOfIterations(50);
+    optimizer->SetNumberOfIterations(500);
     optimizer->SetRelaxationFactor(0.6);
     optimizer->SetReturnBestParametersAndValue(true);
     registration->SetNumberOfWorkUnits(kRegistrationWorkUnits);
 
-    // Random sampling seeded for reproducibility. 10% gives a stable MI
+    // Random sampling seeded for reproducibility. 20% gives a stable MI
     // gradient so the optimizer needs fewer iterations from the pre-aligned
     // starting point.
     registration->SetMetricSamplingStrategy(RegistrationType::RANDOM);
-    registration->SetMetricSamplingPercentage(0.10);
+    registration->SetMetricSamplingPercentage(0.20);
     registration->MetricSamplingReinitializeSeed(kRegistrationSeed);
 
     // Coarse-to-fine for a wider capture range.
@@ -552,4 +600,115 @@ bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
     tfmWriter->Update();
 
     return true;
+}
+
+// Returns a 4x4 matrix mapping fixed (US) physical coords to moving (MRI)
+// physical coords, or nullptr on failure.
+vtkSmartPointer<vtkMatrix4x4> RegisterProstateWithCenters(
+    RegImageType *fixed,   // Ultrasound
+    RegImageType *moving,  // MRI
+    const itk::Point<double, 3> &fixedCenter,
+    const itk::Point<double, 3> &movingCenter) {
+    using ImageType = RegImageType;
+
+    auto fixedImage = fixed;
+    auto movingImage = moving;
+
+    // 2. Setup the Transform (Manual Initialization)
+    using TransformType = itk::Euler3DTransform<double>;
+    auto initialTransform = TransformType::New();
+
+    // Set Center of Rotation to the MRI prostate center
+    initialTransform->SetCenter(movingCenter);
+
+    // Calculate Translation (Fixed - Moving)
+    TransformType::OutputVectorType translation;
+    translation[0] = fixedCenter[0] - movingCenter[0];
+    translation[1] = fixedCenter[1] - movingCenter[1];
+    translation[2] = fixedCenter[2] - movingCenter[2];
+    initialTransform->SetTranslation(translation);
+
+    // 3. Setup the Metric (Mutual Information for MRI/US)
+    using MetricType =
+        itk::MattesMutualInformationImageToImageMetricv4<ImageType, ImageType>;
+    auto metric = MetricType::New();
+    metric->SetNumberOfHistogramBins(50);
+    // Disable gradient filtering for speed and noise robustness in US
+    metric->SetUseMovingImageGradientFilter(false);
+    metric->SetUseFixedImageGradientFilter(false);
+
+    // 4. Setup the Optimizer
+    using OptimizerType = itk::RegularStepGradientDescentOptimizerv4<double>;
+    auto optimizer = OptimizerType::New();
+    optimizer->SetLearningRate(1.0);
+    optimizer->SetMinimumStepLength(1e-4);
+    optimizer->SetNumberOfIterations(100);
+
+    // 5. Setup the Registration Method v4
+    using RegistrationType =
+        itk::ImageRegistrationMethodv4<ImageType, ImageType>;
+    auto registration = RegistrationType::New();
+
+    registration->SetFixedImage(fixedImage);
+    registration->SetMovingImage(movingImage);
+    registration->SetMetric(metric);
+    registration->SetOptimizer(optimizer);
+
+    // Set the manual transform as the starting point
+    registration->SetInitialTransform(initialTransform);
+    registration->InPlaceOn();  // Optimize the initialTransform object directly
+
+    // Set Random Sampling (Use 10% of pixels)
+    registration->SetMetricSamplingStrategy(
+        RegistrationType::MetricSamplingStrategyType::RANDOM);
+    registration->SetMetricSamplingPercentage(0.10);
+
+    // 6. Execute Registration
+    std::cout << "Starting Registration..." << std::endl;
+    try {
+        registration->Update();
+        std::cout << "Registration Complete!" << std::endl;
+        std::cout << "Final Metric Value: " << optimizer->GetValue()
+                  << std::endl;
+        std::cout << "Final Transform Parameters: "
+                  << initialTransform->GetParameters() << std::endl;
+    } catch (const itk::ExceptionObject &e) {
+        std::cerr << "Registration failed: " << e << std::endl;
+        return nullptr;
+    }
+
+    // 7. Resample the Moving Image to the Fixed Image grid for visualization
+    using ResampleFilterType = itk::ResampleImageFilter<ImageType, ImageType>;
+    auto resampler = ResampleFilterType::New();
+    resampler->SetInput(movingImage);
+    resampler->SetTransform(initialTransform);
+    resampler->SetUseReferenceImage(true);
+    resampler->SetReferenceImage(fixedImage);
+    resampler->SetDefaultPixelValue(0);
+
+    // (Optional) Write output to disk
+    using WriterType = itk::ImageFileWriter<ImageType>;
+    auto writer = WriterType::New();
+    writer->SetFileName("Registered_MRI.nii.gz");
+    writer->SetInput(resampler->GetOutput());
+
+    try {
+        writer->Update();
+    } catch (const itk::ExceptionObject &e) {
+        std::cerr << "Error writing output: " << e << std::endl;
+    }
+
+    // Build the 4x4 homogeneous matrix from the optimized Euler3D transform.
+    // GetMatrix() is the 3x3 rotation; GetOffset() is the full translation
+    // (accounting for the center of rotation).
+    const auto &R = initialTransform->GetMatrix();
+    const auto &t = initialTransform->GetOffset();
+    auto fixedToMoving = vtkSmartPointer<vtkMatrix4x4>::New();
+    fixedToMoving->Identity();
+    for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 3; ++col)
+            fixedToMoving->SetElement(row, col, R(row, col));
+        fixedToMoving->SetElement(row, 3, t[row]);
+    }
+    return fixedToMoving;
 }

@@ -21,6 +21,7 @@ public:
     ~VTKOpenGLWidget();
 
     void runRegistration();
+    void runRegistrationWithCenters();
 
     void setUsOpacity(double opacity);
     void setMriOpacity(double opacity);
@@ -52,4 +53,7 @@ private:
 
     itk::Image<short, 3>::Pointer m_usItkImage;
     itk::Image<short, 3>::Pointer m_mriItkImage;
+
+    std::string m_mriDir;
+    std::string m_ultrasoundPath;
 };

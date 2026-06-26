@@ -13,6 +13,7 @@ public:
 
 private slots:
     void onRigidRegistration();
+    void onEulerRegistration();
     void onOpacityControls();
 
 private:

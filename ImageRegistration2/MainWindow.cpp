@@ -29,6 +29,9 @@ void MainWindow::createMenuBar() {
     QAction *rigidAction = registrationMenu->addAction("Rigid Registration (MRI->US)");
     connect(rigidAction, &QAction::triggered, this, &MainWindow::onRigidRegistration);
 
+    QAction *eulerAction = registrationMenu->addAction("Euler3D Registration with Centers (MRI->US)");
+    connect(eulerAction, &QAction::triggered, this, &MainWindow::onEulerRegistration);
+
     QMenu *viewMenu = menuBar()->addMenu("View");
 
     QAction *opacityAction = viewMenu->addAction("Opacity Controls...");
@@ -38,6 +41,10 @@ void MainWindow::createMenuBar() {
 
 void MainWindow::onRigidRegistration() {
     m_vtkWidget->runRegistration();
+}
+
+void MainWindow::onEulerRegistration() {
+    m_vtkWidget->runRegistrationWithCenters();
 }
 
 void MainWindow::onOpacityControls() {
