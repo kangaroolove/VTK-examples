@@ -2,6 +2,7 @@
 
 #include <itkCastImageFilter.h>
 #include <itkCenteredTransformInitializer.h>
+#include <itkEuler3DTransform.h>
 #include <itkGDCMImageIO.h>
 #include <itkGDCMSeriesFileNames.h>
 #include <itkImage.h>
@@ -13,10 +14,10 @@
 #include <itkMattesMutualInformationImageToImageMetricv4.h>
 #include <itkMetaDataObject.h>
 #include <itkNrrdImageIO.h>
+#include <itkOrientImageFilter.h>
 #include <itkRegistrationParameterScalesFromPhysicalShift.h>
 #include <itkRegularStepGradientDescentOptimizerv4.h>
 #include <itkTransformFileWriter.h>
-#include <itkEuler3DTransform.h>
 #include <itkVersorRigid3DTransform.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
@@ -203,10 +204,22 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadDICOMImage(
             std::cout << it->first << " = " << entryvalue->GetMetaDataObjectValue() << std::endl;
     }
 
-    outItkImage = itkReader->GetOutput();
+    auto orientationFilter =
+        itk::OrientImageFilter<ImageType, ImageType>::New();
 
-    auto direction = itkReader->GetOutput()->GetDirection();
-    auto origin = itkReader->GetOutput()->GetOrigin();
+    orientationFilter->UseImageDirectionOn();
+    orientationFilter->SetDesiredCoordinateOrientation(
+        itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
+    orientationFilter->SetInput(itkReader->GetOutput());
+    try {
+        orientationFilter->Update();
+    } catch (itk::ExceptionObject &e) {
+    }
+
+    outItkImage = orientationFilter->GetOutput();
+
+    auto direction = orientationFilter->GetOutput()->GetDirection();
+    auto origin = orientationFilter->GetOutput()->GetOrigin();
     outMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
     outMatrix->Identity();
     for (unsigned int i = 0; i < 3; ++i) {
@@ -249,10 +262,22 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadNrrdImage(
     } catch (...) {
     }
 
-    outItkImage = itkReader->GetOutput();
+    auto orientationFilter =
+        itk::OrientImageFilter<ImageType, ImageType>::New();
 
-    auto direction = itkReader->GetOutput()->GetDirection();
-    auto origin = itkReader->GetOutput()->GetOrigin();
+    orientationFilter->UseImageDirectionOn();
+    orientationFilter->SetDesiredCoordinateOrientation(
+        itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
+    orientationFilter->SetInput(itkReader->GetOutput());
+    try {
+        orientationFilter->Update();
+    } catch (itk::ExceptionObject &e) {
+    }
+
+    outItkImage = orientationFilter->GetOutput();
+
+    auto direction = orientationFilter->GetOutput()->GetDirection();
+    auto origin = orientationFilter->GetOutput()->GetOrigin();
     outMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
     outMatrix->Identity();
     for (unsigned int i = 0; i < 3; ++i) {
@@ -263,7 +288,7 @@ vtkSmartPointer<vtkImageData> VTKOpenGLWidget::loadNrrdImage(
 
     using FilterType = itk::ImageToVTKImageFilter<ImageType>;
     FilterType::Pointer filter = FilterType::New();
-    filter->SetInput(itkReader->GetOutput());
+    filter->SetInput(orientationFilter->GetOutput());
     filter->Update();
 
     if (filter->GetOutput()) qDebug() << "converted successfully";
@@ -658,10 +683,11 @@ vtkSmartPointer<vtkMatrix4x4> RegisterProstateWithCenters(
     registration->SetInitialTransform(initialTransform);
     registration->InPlaceOn();  // Optimize the initialTransform object directly
 
-    // Set Random Sampling (Use 10% of pixels)
+    // Higher sampling gives a more stable MI gradient, reducing noisy
+    // translation jumps
     registration->SetMetricSamplingStrategy(
         RegistrationType::MetricSamplingStrategyType::RANDOM);
-    registration->SetMetricSamplingPercentage(0.10);
+    registration->SetMetricSamplingPercentage(0.20);
 
     // 6. Execute Registration
     std::cout << "Starting Registration..." << std::endl;
