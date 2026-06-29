@@ -180,7 +180,18 @@ static void showProstateCenterDialog(MainWindow *win, VTKOpenGLWidget *widget,
     if (dlg.exec() != QDialog::Accepted)
         return;
 
-    widget->setProstateCenter(role, iBox->value(), jBox->value(), kBox->value());
+    if (role == VTKOpenGLWidget::ImageRole::FixedImage) {
+        iBox->setValue(371);
+        jBox->setValue(164);
+        kBox->setValue(65);
+    } else if (role == VTKOpenGLWidget::ImageRole::MovingImage) {
+        iBox->setValue(325);
+        jBox->setValue(294);
+        kBox->setValue(9);
+    }
+
+    widget->setProstateCenter(role, iBox->value(), jBox->value(),
+                              kBox->value());
     win->statusBar()->showMessage(
         MainWindow::tr("Prostate center set on %1 image at IJK (%2, %3, %4).")
             .arg(imageLabel)

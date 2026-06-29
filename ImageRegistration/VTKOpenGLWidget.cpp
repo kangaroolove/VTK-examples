@@ -216,6 +216,100 @@ bool runRigidRegistration(RegImageType *fixed, RegImageType *moving,
     return true;
 }
 
+bool runRigidRegistration2(RegImageType *fixed, RegImageType *moving,
+                           const double *fixedCenter,
+                           const double *movingCenter,
+                           vtkMatrix4x4 *fixedToMoving,
+                           std::string &errorMessage) {
+    // 1. Define Components
+    using TransformType = itk::VersorRigid3DTransform<double>;
+    using MetricType =
+        itk::MattesMutualInformationImageToImageMetricv4<RegImageType,
+                                                         RegImageType>;
+    using OptimizerType = itk::RegularStepGradientDescentOptimizerv4<double>;
+    using RegistrationType =
+        itk::ImageRegistrationMethodv4<RegImageType, RegImageType,
+                                       TransformType>;
+
+    auto transform = TransformType::New();
+    auto metric = MetricType::New();
+    auto optimizer = OptimizerType::New();
+    auto registration = RegistrationType::New();
+
+    // 2. Initialize the Transform using the World Points
+    TransformType::InputPointType center;
+    TransformType::OutputVectorType initialTranslation;
+    for (int i = 0; i < 3; ++i) {
+        center[i] = fixedCenter[i];
+        initialTranslation[i] = movingCenter[i] - fixedCenter[i];
+    }
+    transform->SetIdentity();
+    transform->SetCenter(center);
+    transform->SetTranslation(initialTranslation);
+
+    // 3. Configure the Metric (Multi-modal)
+    metric->SetNumberOfHistogramBins(50);
+    // Optional but recommended for mutual information: use random sampling
+    metric->SetUseMovingImageGradientFilter(false);
+    metric->SetUseFixedImageGradientFilter(false);
+
+    // 4. Configure the Optimizer
+    // Scales are critical! Rotation parameters are [-1, 1], translation is in
+    // millimeters.
+    using OptimizerScalesType = OptimizerType::ScalesType;
+    OptimizerScalesType optimizerScales(transform->GetNumberOfParameters());
+
+    const double translationScale =
+        1.0 / 1000.0;                       // Penalize large translations
+    optimizerScales[0] = 1.0;               // Versor X
+    optimizerScales[1] = 1.0;               // Versor Y
+    optimizerScales[2] = 1.0;               // Versor Z
+    optimizerScales[3] = translationScale;  // Translation X
+    optimizerScales[4] = translationScale;  // Translation Y
+    optimizerScales[5] = translationScale;  // Translation Z
+
+    optimizer->SetScales(optimizerScales);
+    optimizer->SetLearningRate(1.0);
+    optimizer->SetMinimumStepLength(0.001);
+    optimizer->SetNumberOfIterations(200);
+
+    // 5. Setup Registration Pipeline
+    registration->SetFixedImage(fixed);
+    registration->SetMovingImage(moving);
+    registration->SetMetric(metric);
+    registration->SetOptimizer(optimizer);
+
+    // Set the initial transform we calculated
+    registration->SetInitialTransform(transform);
+
+    // Optimize the transform parameters in place
+    registration->SetInPlace(true);
+
+    // 6. Execute Registration
+    try {
+        std::cout << "Starting Registration..." << std::endl;
+        registration->Update();
+        std::cout << "Registration Complete!" << std::endl;
+    } catch (itk::ExceptionObject &err) {
+        errorMessage = err.GetDescription();
+        return false;
+    }
+
+    // 7. Store result into fixedToMoving
+    const TransformType::MatrixType matrix = transform->GetMatrix();
+    const TransformType::OffsetType offset = transform->GetOffset();
+
+    fixedToMoving->Identity();
+    for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 3; ++col) {
+            fixedToMoving->SetElement(row, col, matrix(row, col));
+        }
+        fixedToMoving->SetElement(row, 3, offset[row]);
+    }
+
+    return true;
+}
+
 } // namespace
 
 VTKOpenGLWidget::VTKOpenGLWidget(QWidget *parent)
@@ -649,8 +743,8 @@ bool VTKOpenGLWidget::registerMovingToFixed(QString &errorMessage) {
 
     vtkNew<vtkMatrix4x4> fixedToMoving;
     std::string regError;
-    const bool ok = runRigidRegistration(fixed, moving, fixedCenter, movingCenter,
-                                         fixedToMoving, regError);
+    const bool ok = runRigidRegistration2(
+        fixed, moving, fixedCenter, movingCenter, fixedToMoving, regError);
 
     itk::MultiThreaderBase::SetGlobalDefaultNumberOfThreads(previousThreads);
 
