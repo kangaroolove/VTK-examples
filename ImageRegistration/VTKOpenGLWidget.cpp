@@ -298,21 +298,17 @@ bool VTKOpenGLWidget::loadImage(const QString &fileName, ImageRole role,
 
     ImageType::Pointer itkImage = orienter->GetOutput();
 
-    // The vtkImageData keeps the file's origin and spacing, but it cannot
-    // store direction cosines, so the rotation is carried in a separate
-    // image-to-world matrix: world = D * (p - origin) + origin. With an
-    // identity direction the matrix is identity and image coordinates are
-    // already world (LPS) coordinates.
+    // The vtkImageData origin is zeroed so image coordinates are simply
+    // voxel * spacing from (0,0,0). The real LPS origin and direction are
+    // encoded in imageToWorld: world = D * p_image + origin.
     const ImageType::DirectionType direction = itkImage->GetDirection();
     const ImageType::PointType origin = itkImage->GetOrigin();
     vtkNew<vtkMatrix4x4> imageToWorld;
     for (int row = 0; row < 3; ++row) {
-        double translation = origin[row];
         for (int col = 0; col < 3; ++col) {
             imageToWorld->SetElement(row, col, direction(row, col));
-            translation -= direction(row, col) * origin[col];
         }
-        imageToWorld->SetElement(row, 3, translation);
+        imageToWorld->SetElement(row, 3, origin[row]);
     }
 
     typedef itk::ImageToVTKImageFilter<ImageType> ConnectorType;
@@ -322,6 +318,7 @@ bool VTKOpenGLWidget::loadImage(const QString &fileName, ImageRole role,
 
     vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
     image->DeepCopy(connector->GetOutput());
+    image->SetOrigin(0.0, 0.0, 0.0);
 
     setImage(role, image, imageToWorld);
     // Keep the oriented ITK image (in LPS physical space) for registration.
