@@ -133,72 +133,85 @@ public:
   }
 };
 
-int
-main(int argc, char * argv[])
-{
-  // if (argc > 1)
-  // {
-  //   std::cerr << "Missing Parameters " << std::endl;
-  //   std::cerr << "Usage: " << argv[0];
-  //   std::cerr << " fixedImageFile  movingImageFile ";
-  //   std::cerr << " outputImagefile  [differenceBeforeRegistration] ";
-  //   std::cerr << " [differenceAfterRegistration] ";
-  //   std::cerr << " [sliceBeforeRegistration] ";
-  //   std::cerr << " [sliceDifferenceBeforeRegistration] ";
-  //   std::cerr << " [sliceDifferenceAfterRegistration] ";
-  //   std::cerr << " [sliceAfterRegistration] " << std::endl;
-  //   return EXIT_FAILURE;
-  // }
-  constexpr unsigned int Dimension = 3;
-  using PixelType = float;
-  using FixedImageType = itk::Image<PixelType, Dimension>;
-  using MovingImageType = itk::Image<PixelType, Dimension>;
+int main(int argc, char *argv[]) {
+    struct FilePaths {
+        std::string movingFilePath;
+        std::string fixedFilePath;
+        std::string outputFilePath;
+        std::string registrationImagePath;
+        std::string differenceRegistrationBeforePath;
+        std::string differenceRegistrationAfterPath;
+        std::string differenceRegistrationBeforeImagePath;
+        std::string differenceRegistrationAfterImagePath;
+        std::string resliceImagePath;
+    };
 
-  //  Software Guide : BeginLatex
-  //
-  //  The Transform class is instantiated using the code below. The only
-  //  template parameter to this class is the representation type of the
-  //  space coordinates.
-  //
-  //  \index{itk::Versor\-Rigid3D\-Transform!Instantiation}
-  //
-  //  Software Guide : EndLatex
+    FilePaths filePaths;
+    filePaths.fixedFilePath =
+        "D:/work/VTK-example/BrainRigidRegistration/build/Release/fixedImage."
+        "mha";
+    filePaths.movingFilePath =
+        "D:/work/VTK-example/BrainRigidRegistration/build/Release/movingImage."
+        "mha";
+    filePaths.outputFilePath = "output.mha";
+    filePaths.differenceRegistrationAfterPath = "differenceBefore.mha";
+    filePaths.differenceRegistrationBeforePath = "differenceAfter.mha";
+    filePaths.differenceRegistrationBeforeImagePath = "differenceBefore.png";
+    filePaths.differenceRegistrationAfterImagePath = "differenceAfter.png";
+    filePaths.registrationImagePath = "output.png";
+    filePaths.resliceImagePath = "reslice.png";
 
-  // Software Guide : BeginCodeSnippet
-  using TransformType = itk::VersorRigid3DTransform<double>;
-  // Software Guide : EndCodeSnippet
+    constexpr unsigned int Dimension = 3;
+    using PixelType = float;
+    using FixedImageType = itk::Image<PixelType, Dimension>;
+    using MovingImageType = itk::Image<PixelType, Dimension>;
 
-  using OptimizerType = itk::RegularStepGradientDescentOptimizerv4<double>;
-  using MetricType =
-    itk::MeanSquaresImageToImageMetricv4<FixedImageType, MovingImageType>;
-  using RegistrationType = itk::
-    ImageRegistrationMethodv4<FixedImageType, MovingImageType, TransformType>;
+    //  Software Guide : BeginLatex
+    //
+    //  The Transform class is instantiated using the code below. The only
+    //  template parameter to this class is the representation type of the
+    //  space coordinates.
+    //
+    //  \index{itk::Versor\-Rigid3D\-Transform!Instantiation}
+    //
+    //  Software Guide : EndLatex
 
-  MetricType::Pointer       metric = MetricType::New();
-  OptimizerType::Pointer    optimizer = OptimizerType::New();
-  RegistrationType::Pointer registration = RegistrationType::New();
+    // Software Guide : BeginCodeSnippet
+    using TransformType = itk::VersorRigid3DTransform<double>;
+    // Software Guide : EndCodeSnippet
 
-  registration->SetMetric(metric);
-  registration->SetOptimizer(optimizer);
+    using OptimizerType = itk::RegularStepGradientDescentOptimizerv4<double>;
+    using MetricType =
+        itk::MeanSquaresImageToImageMetricv4<FixedImageType, MovingImageType>;
+    using RegistrationType =
+        itk::ImageRegistrationMethodv4<FixedImageType, MovingImageType,
+                                       TransformType>;
 
-  //  Software Guide : BeginLatex
-  //
-  //  The initial transform object is constructed below. This transform will
-  //  be initialized, and its initial parameters will be used when the
-  //  registration process starts.
-  //
-  //  \index{itk::Versor\-Rigid3D\-Transform!Pointer}
-  //
-  //  Software Guide : EndLatex
+    MetricType::Pointer metric = MetricType::New();
+    OptimizerType::Pointer optimizer = OptimizerType::New();
+    RegistrationType::Pointer registration = RegistrationType::New();
 
-  // Software Guide : BeginCodeSnippet
-  TransformType::Pointer initialTransform = TransformType::New();
-  // Software Guide : EndCodeSnippet
+    registration->SetMetric(metric);
+    registration->SetOptimizer(optimizer);
 
-  using FixedImageReaderType = itk::ImageFileReader<FixedImageType>;
-  using MovingImageReaderType = itk::ImageFileReader<MovingImageType>;
+    //  Software Guide : BeginLatex
+    //
+    //  The initial transform object is constructed below. This transform will
+    //  be initialized, and its initial parameters will be used when the
+    //  registration process starts.
+    //
+    //  \index{itk::Versor\-Rigid3D\-Transform!Pointer}
+    //
+    //  Software Guide : EndLatex
 
-  using MetaIOType = itk::MetaImageIO;
+    // Software Guide : BeginCodeSnippet
+    TransformType::Pointer initialTransform = TransformType::New();
+    // Software Guide : EndCodeSnippet
+
+    using FixedImageReaderType = itk::ImageFileReader<FixedImageType>;
+    using MovingImageReaderType = itk::ImageFileReader<MovingImageType>;
+
+    using MetaIOType = itk::MetaImageIO;
     MetaIOType::Pointer metaIO = MetaIOType::New();
 
 
@@ -207,14 +220,11 @@ main(int argc, char * argv[])
   MovingImageReaderType::Pointer movingImageReader =
     MovingImageReaderType::New();
 
-  std::string fixedImageDir = "D:/work/VTK-example/testRegistration/build/Debug/fixedImage.mha";
-  std::string movingImageDir = "D:/work/VTK-example/testRegistration/build/Debug/movingImage.mha";
-
   fixedImageReader->SetImageIO(metaIO);
   movingImageReader->SetImageIO(metaIO);
 
-  fixedImageReader->SetFileName(fixedImageDir);
-  movingImageReader->SetFileName(movingImageDir);
+  fixedImageReader->SetFileName(filePaths.fixedFilePath);
+  movingImageReader->SetFileName(filePaths.movingFilePath);
 
   registration->SetFixedImage(fixedImageReader->GetOutput());
   registration->SetMovingImage(movingImageReader->GetOutput());
@@ -594,8 +604,7 @@ main(int argc, char * argv[])
   WriterType::Pointer     writer = WriterType::New();
   CastFilterType::Pointer caster = CastFilterType::New();
 
-  std::string outputDir = "output.mha";
-  writer->SetFileName(outputDir);
+  writer->SetFileName(filePaths.outputFilePath);
 
   caster->SetInput(resampler->GetOutput());
   writer->SetInput(caster->GetOutput());
@@ -625,9 +634,8 @@ main(int argc, char * argv[])
   // fixed and resampled moving image.
   // if (argc > 5)
   {
-    std::string diffAfterDir = "ImageRegistration8DifferenceAfter.mhd";
-    writer2->SetFileName(diffAfterDir);
-    writer2->Update();
+      writer2->SetFileName(filePaths.differenceRegistrationAfterPath);
+      writer2->Update();
   }
 
   using IdentityTransformType = itk::IdentityTransform<double, Dimension>;
@@ -636,10 +644,9 @@ main(int argc, char * argv[])
   // fixed and moving image before registration.
   // if (argc > 4)
   {
-    std::string diffBeforeDir = "ImageRegistration8DifferenceBefore.mhd";
-    resampler->SetTransform(identity);
-    writer2->SetFileName(diffBeforeDir);
-    writer2->Update();
+      resampler->SetTransform(identity);
+      writer2->SetFileName(filePaths.differenceRegistrationBeforePath);
+      writer2->Update();
   }
   //
   //  Here we extract slices from the input volume, and the difference volumes
@@ -670,37 +677,37 @@ main(int argc, char * argv[])
   SliceWriterType::Pointer sliceWriter = SliceWriterType::New();
   sliceWriter->SetInput(extractor->GetOutput());
 
-
-  std::string registrationOutputDir = "ImageRegistration8Output.png";
-  std::string registrationDiffBeforeDir = "ImageRegistration8DifferenceBefore.png";
-  std::string registrationDiffAfterDir = "ImageRegistration8DifferenceAfter.png";
-  std::string registrationSliceDir = "ImageRegistration8RegisteredSlice.png";
+  // std::string registrationOutputDir = "ImageRegistration8Output.png";
+  // std::string registrationDiffBeforeDir =
+  // "ImageRegistration8DifferenceBefore.png"; std::string
+  // registrationDiffAfterDir = "ImageRegistration8DifferenceAfter.png";
+  // std::string registrationSliceDir = "ImageRegistration8RegisteredSlice.png";
 
   // if (argc > 6)
   {
     extractor->SetInput(caster->GetOutput());
     resampler->SetTransform(identity);
-    sliceWriter->SetFileName(registrationOutputDir);
+    sliceWriter->SetFileName(filePaths.registrationImagePath);
     sliceWriter->Update();
   }
   // if (argc > 7)
   {
     extractor->SetInput(intensityRescaler->GetOutput());
     resampler->SetTransform(identity);
-    sliceWriter->SetFileName(registrationDiffBeforeDir);
+    sliceWriter->SetFileName(filePaths.differenceRegistrationBeforeImagePath);
     sliceWriter->Update();
   }
   // if (argc > 8)
   {
     resampler->SetTransform(finalTransform);
-    sliceWriter->SetFileName(registrationDiffAfterDir);
+    sliceWriter->SetFileName(filePaths.differenceRegistrationAfterImagePath);
     sliceWriter->Update();
   }
   // if (argc > 9)
   {
     extractor->SetInput(caster->GetOutput());
     resampler->SetTransform(finalTransform);
-    sliceWriter->SetFileName(registrationSliceDir);
+    sliceWriter->SetFileName(filePaths.registrationImagePath);
     sliceWriter->Update();
   }
   return EXIT_SUCCESS;
