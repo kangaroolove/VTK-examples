@@ -141,7 +141,7 @@ struct RegistrationParams
   bool useFixedImageMask = false;
 
   unsigned int numberOfHistogramBins = 50;
-  double metricSamplingPercentage = 1.0;
+  double metricSamplingPercentage = 0.2;
 
   unsigned int outputSliceIndex = 90;
 };
