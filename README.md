@@ -23,6 +23,13 @@
 ### RemeshingAndSmooth
 <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/6c0b8a3b-fd39-4bee-88cc-994f7d2600d3" />
 
+### BrainRigidRegistration
+<img width="1919" height="1032" alt="image" src="https://github.com/user-attachments/assets/867cda4e-fab2-49fe-b7ca-f8aad8162783" />
+Before registration
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/903c3dae-aa12-40d0-967d-6530b6daeef0" />
+After registration
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/70f0ca30-f293-4b75-8a74-87511508d38a" />
+
 
 
 
