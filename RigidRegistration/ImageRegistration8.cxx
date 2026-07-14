@@ -78,6 +78,33 @@ public:
   }
 };
 
+// Fires once per pyramid level (see itk::MultiResolutionIterationEvent) so
+// the per-iteration log above is legible - otherwise it's not obvious from
+// the printed iteration count alone that it reset to 0 because a new,
+// less-shrunk level started rather than because something went wrong.
+class CommandMultiResolutionIterationUpdate : public itk::Command {
+public:
+    using Self = CommandMultiResolutionIterationUpdate;
+    using Superclass = itk::Command;
+    using Pointer = itk::SmartPointer<Self>;
+    itkNewMacro(Self);
+
+protected:
+    CommandMultiResolutionIterationUpdate() = default;
+
+public:
+    void Execute(itk::Object *caller, const itk::EventObject &event) override {
+        Execute((const itk::Object *)caller, event);
+    }
+    void Execute(const itk::Object *object,
+                 const itk::EventObject &event) override {
+        if (!itk::MultiResolutionIterationEvent().CheckEvent(&event)) {
+            return;
+        }
+        std::cout << "-- Starting next resolution level --" << std::endl;
+    }
+};
+
 constexpr unsigned int Dimension = 3;
 using PixelType = float;
 using FixedImageType = itk::Image<PixelType, Dimension>;
@@ -114,7 +141,7 @@ struct RegistrationParams
   bool useFixedImageMask = false;
 
   unsigned int numberOfHistogramBins = 50;
-  double metricSamplingPercentage = 0.2;
+  double metricSamplingPercentage = 1.0;
 
   unsigned int outputSliceIndex = 90;
 };
@@ -275,23 +302,32 @@ RunRigidRegistration(const RegistrationParams & params)
   CommandIterationUpdate::Pointer observer = CommandIterationUpdate::New();
   optimizer->AddObserver(itk::IterationEvent(), observer);
 
+  CommandMultiResolutionIterationUpdate::Pointer levelObserver =
+      CommandMultiResolutionIterationUpdate::New();
+  registration->AddObserver(itk::MultiResolutionIterationEvent(),
+                            levelObserver);
+
   // Coarse-to-fine multi-resolution schedule: registering at full resolution
   // first is unreliable for e.g. MR/ultrasound because ultrasound speckle
   // creates many spurious local optima in the mutual information landscape.
   // Starting heavily shrunk/smoothed lets the optimizer find the broad
-  // global alignment before refining it on the finer levels. Deliberately
-  // stopping the pyramid at half resolution (shrink factor 2) instead of
-  // full resolution avoids fitting that high-frequency noise; the output is
-  // still resampled at the full fixed resolution regardless of the coarsest
-  // optimization level.
-    constexpr unsigned int numberOfLevels = 1;
-    RegistrationType::ShrinkFactorsArrayType shrinkFactorsPerLevel;
-    shrinkFactorsPerLevel.SetSize(1);
-    shrinkFactorsPerLevel[0] = 1;
-    
-    RegistrationType::SmoothingSigmasArrayType smoothingSigmasPerLevel;
-    smoothingSigmasPerLevel.SetSize(1);
-    smoothingSigmasPerLevel[0] = 0;
+  // global alignment cheaply (a shrink-4 level has 1/64th the voxels of full
+  // resolution) before refining it on the finer levels; the final level still
+  // runs at shrink factor 1 / sigma 0, so accuracy at convergence is
+  // unchanged - the earlier levels just get it there in far fewer full-
+  // resolution iterations.
+  constexpr unsigned int numberOfLevels = 3;
+  RegistrationType::ShrinkFactorsArrayType shrinkFactorsPerLevel;
+  shrinkFactorsPerLevel.SetSize(numberOfLevels);
+  shrinkFactorsPerLevel[0] = 4;
+  shrinkFactorsPerLevel[1] = 2;
+  shrinkFactorsPerLevel[2] = 1;
+
+  RegistrationType::SmoothingSigmasArrayType smoothingSigmasPerLevel;
+  smoothingSigmasPerLevel.SetSize(numberOfLevels);
+  smoothingSigmasPerLevel[0] = 2;
+  smoothingSigmasPerLevel[1] = 1;
+  smoothingSigmasPerLevel[2] = 0;
 
   registration->SetNumberOfLevels(numberOfLevels);
   registration->SetSmoothingSigmasPerLevel(smoothingSigmasPerLevel);
