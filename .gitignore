@@ -69,3 +69,5 @@
 /ImageRegistration2/.vscode
 /BrainRigidRegistration/.vscode
 /BrainRigidRegistration/build
+/RigidRegistration/.vscode
+/RigidRegistration/build
