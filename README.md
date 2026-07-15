@@ -30,6 +30,14 @@ Before registration
 After registration
 <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/70f0ca30-f293-4b75-8a74-87511508d38a" />
 
+### RigidRegistration
+Before registration
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/a762faf9-1b82-41f3-923b-68179d7238f0" />
+After registration
+<img width="1783" height="1032" alt="image" src="https://github.com/user-attachments/assets/23df5a14-a90a-4b3d-afff-0a761fc22380" />
+
+
+
 
 
 
